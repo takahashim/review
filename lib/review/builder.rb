@@ -115,39 +115,39 @@ module ReVIEW
     def list(lines, id, caption, lang = nil)
       buf = ""
       begin
-        buf << list_header id, caption, lang
+        buf << list_header(id, caption, lang)
       rescue KeyError
         error "no such list: #{id}"
       end
-      buf << list_body id, lines, lang
+      buf << list_body(id, lines, lang)
       buf
     end
 
     def listnum(lines, id, caption, lang = nil)
       buf = ""
       begin
-        buf << list_header id, caption, lang
+        buf << list_header(id, caption, lang)
       rescue KeyError
         error "no such list: #{id}"
       end
-      buf << listnum_body lines, lang
+      buf << listnum_body(lines, lang)
       buf
     end
 
     def source(lines, caption, lang = nil)
       buf = ""
-      buf << source_header caption
-      buf << source_body lines, lang
+      buf << source_header(caption)
+      buf << source_body(lines, lang)
       buf
     end
 
     def image(lines, id, caption, metric = nil)
       buf = ""
       if @chapter.image(id).bound?
-        buf << image_image id, caption, metric
+        buf << image_image(id, caption, metric)
       else
         warn "image not bound: #{id}" if @strict
-        buf << image_dummy id, caption, lines
+        buf << image_dummy(id, caption, lines)
       end
       buf
     end
@@ -169,13 +169,13 @@ module ReVIEW
 
       begin
         if caption.present?
-          buf << table_header id, caption
+          buf << table_header(id, caption)
         end
       rescue KeyError
         error "no such table: #{id}"
       end
       return if rows.empty?
-      buf << table_begin rows.first.size
+      buf << table_begin(rows.first.size)
       if sepidx
         sepidx.times do
           buf << tr(rows.shift.map { |s| th(s) })
@@ -318,10 +318,10 @@ module ReVIEW
 
     def bibpaper(lines, id, caption)
       buf = ""
-      buf << bibpaper_header id, caption
+      buf << bibpaper_header(id, caption)
       unless lines.empty?
         buf << "\n"
-        buf << bibpaper_bibpaper id, caption, lines
+        buf << bibpaper_bibpaper(id, caption, lines)
       end
       buf << "\n"
       buf
