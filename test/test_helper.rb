@@ -17,7 +17,9 @@ def prepare_samplebook(srcdir)
 end
 
 def compile_inline(text)
-  @builder.compile_inline(text)
+  ast = @builder.compile_inline(text)
+  ##pp [:ast, ast]
+  ast.to_doc
 end
 
 def compile_block(text)
@@ -33,11 +35,13 @@ end
 
 def compile_block_html(text)
   @chapter.content = text
-  matched = @compiler.compile(@chapter).match(Regexp.new(%Q(<body>\n(.+)</body>), Regexp::MULTILINE))
+  result = @compiler.compile(@chapter)
+  ##pp [:compile_block_html, result]
+  matched = result.match(Regexp.new(%Q(<body>\n(.+)</body>), Regexp::MULTILINE))
   if matched && matched.size > 1
     matched[1]
   else
-    ''
+    result
   end
 end
 
