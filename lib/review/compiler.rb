@@ -9,32 +9,11 @@
 require 'review/extentions'
 require 'review/preprocessor'
 require 'review/exception'
+require 'review/node'
+require 'review/location'
 require 'strscan'
 
 module ReVIEW
-  class Location
-    def initialize(filename, f)
-      @filename = filename
-      @f = f
-    end
-
-    attr_reader :filename
-
-    def lineno
-      @f.lineno
-    end
-
-    def string
-      begin
-        "#{@filename}:#{@f.lineno}"
-      rescue
-        "#{@filename}:nil"
-      end
-    end
-
-    alias_method :to_s, :string
-  end
-
   class Compiler
     def initialize(strategy)
       @strategy = strategy
@@ -44,15 +23,17 @@ module ReVIEW
 
     def compile(chap)
       @chapter = chap
+      @root_ast = []
+      @current_content = nil
       do_compile
-      @strategy.result
     end
 
     class SyntaxElement
-      def initialize(name, type, argc, &block)
+      def initialize(name, type, argc, esc, &block)
         @name = name
         @type = type
         @argc_spec = argc
+        @esc_patterns = esc
         @checker = block
       end
 
@@ -76,27 +57,50 @@ module ReVIEW
         end
       end
 
+      def compile_args(args)
+        if @esc_patterns
+          args.map.with_index do |pattern, i|
+            if @esc_patterns[i]
+              args[i].__send__("to_#{@esc_patterns[i]}")
+            else
+              args[i].to_doc
+            end
+          end
+        else
+          ## args.map(&:to_doc)
+          args.map(&:to_s)
+        end
+      end
+
       def block_required?
-        @type == :block
+        @type == :block or @type == :code_block
       end
 
       def block_allowed?
-        @type == :block or @type == :optional
+        %i(block code_block optional optional_code_block).include?(@type)
+      end
+
+      def code_block?
+        @type == :code_block or @type == :optional_code_block
       end
     end
 
     SYNTAX = {}
 
-    def self.defblock(name, argc, optional = false, &block)
-      defsyntax name, (optional ? :optional : :block), argc, &block
+    def self.defblock(name, argc, optional = false, esc = nil, &block)
+      defsyntax(name, (optional ? :optional : :block), argc, esc, &block)
     end
 
-    def self.defsingle(name, argc, &block)
-      defsyntax name, :line, argc, &block
+    def self.defcodeblock(name, argc, optional = false, esc = nil, &block)
+      defsyntax(name, (optional ? :optional_code_block : :code_block), argc, esc, &block)
     end
 
-    def self.defsyntax(name, type, argc, &block)
-      SYNTAX[name] = SyntaxElement.new(name, type, argc, &block)
+    def self.defsingle(name, argc, esc = nil, &block)
+      defsyntax(name, :line, argc, esc, &block)
+    end
+
+    def self.defsyntax(name, type, argc, esc = nil, &block)
+      SYNTAX[name] = SyntaxElement.new(name, type, argc, esc, &block)
     end
 
     def self.definline(name)
@@ -127,21 +131,21 @@ module ReVIEW
 
     defblock :read, 0
     defblock :lead, 0
-    defblock :list, 2..3
-    defblock :emlist, 0..2
-    defblock :cmd, 0..1
-    defblock :table, 0..2
-    defblock :imgtable, 0..2
-    defblock :emtable, 0..1
+    defcodeblock :list, 2..3
+    defcodeblock :emlist, 0..2
+    defcodeblock :cmd, 0..1
+    defcodeblock :table, 0..2
+    defcodeblock :imgtable, 0..2
+    defcodeblock :emtable, 0..1
     defblock :quote, 0
     defblock :image, 2..3, true
-    defblock :source, 0..2
-    defblock :listnum, 2..3
-    defblock :emlistnum, 0..2
+    defcodeblock :source, 0..2
+    defcodeblock :listnum, 2..3
+    defcodeblock :emlistnum, 0..2
     defblock :bibpaper, 2..3, true
     defblock :doorquote, 1
     defblock :talk, 0
-    defblock :texequation, 0
+    defcodeblock :texequation, 0
     defblock :graph, 1..3
     defblock :indepimage, 1..3, true
     defblock :numberlessimage, 1..3, true
@@ -234,36 +238,42 @@ module ReVIEW
     definline :w
     definline :wb
 
-    private
+    ## private
 
     def do_compile
       f = LineInput.new(StringIO.new(@chapter.content))
-      @strategy.bind self, @chapter, Location.new(@chapter.basename, f)
-      tagged_section_init
+      @location = Location.new(@chapter.basename, f)
+      @strategy.bind(self, @chapter, @location)
+      @current_column = nil
+
+      root = ast_init
+
       while f.next?
         case f.peek
         when /\A\#@/
           f.gets # Nothing to do
         when /\A=+[\[\s\{]/
-          compile_headline f.gets
+          @current_content << parse_headline(f.gets)
         when /\A\s+\*/
-          compile_ulist f
+          @current_content << parse_ulist(f)
         when /\A\s+\d+\./
-          compile_olist f
+          @current_content << parse_olist(f)
         when /\A\s*:\s/
-          compile_dlist f
+          @current_content << parse_dlist(f)
         when %r{\A//\}}
           f.gets
           error 'block end seen but not opened'
+        when %r{\A//table\[}
+          @current_content << parse_table(f)
         when %r{\A//[a-z]+}
           name, args, lines = read_command(f)
           syntax = syntax_descriptor(name)
           unless syntax
             error "unknown command: //#{name}"
-            compile_unknown_command args, lines
+            ## compile_unknown_command(args, lines)
             next
           end
-          compile_command syntax, args, lines
+          @current_content << parse_command(syntax, args, lines)
         when %r{\A//}
           line = f.gets
           warn "`//' seen but is not valid command: #{line.strip.inspect}"
@@ -276,169 +286,332 @@ module ReVIEW
             f.gets
             next
           end
-          compile_paragraph f
+          @current_content << read_paragraph(f)
         end
       end
-      close_all_tagged_section
+
+      ast = ast_convert(root)
+      ast
     end
 
-    def compile_headline(line)
-      @headline_indexs ||= [@chapter.number.to_i - 1]
+    def ast_init
+      root_ast = DocumentNode.new(self, 0, [])
+      @current_content = root_ast.content
+      root_ast
+    end
+
+    def ast_convert(ast)
+      new_ast = convert_column(ast)
+      if $DEBUG
+        File.open("review-dump.json","w") do |f|
+          f.write(ast.to_json)
+        end
+      end
+      new_ast.to_doc
+    end
+
+    def position
+      @location.to_s
+    end
+
+    def parse_headline(line)
       m = /\A(=+)(?:\[(.+?)\])?(?:\{(.+?)\})?(.*)/.match(line)
       level = m[1].size
       tag = m[2]
       label = m[3]
-      caption = m[4].strip
+      caption = NodeList.new(TextNode.new(self, position, m[4].strip))
+      HeadlineNode.new(self, position, level, tag, label, caption)
+    end
+
+    def compile_column(level, label, caption, content)
+pp [:compile_column, caption, content]
+      buf = ""
+      buf << @strategy.__send__("column_begin", level, label, caption)
+      buf << content.to_doc
+      buf << @strategy.__send__("column_end", level)
+      buf
+    end
+
+    def compile_headline(level, tag, label, caption)
+      buf = ""
+      caption ||= ""
+      caption.strip!
       index = level - 1
-      if tag
-        if tag !~ %r{\A/}
-          if caption.empty?
-            warn 'headline is empty.'
+      buf << @strategy.headline(level, label, caption)
+      buf
+    end
+
+    def convert_column(doc)
+      content = doc.content
+      new_content = NodeList.new
+      current_content = new_content
+      content.each do |elem|
+        if elem.kind_of?(ReVIEW::HeadlineNode) && elem.cmd && elem.cmd == "column"
+          flush_column(new_content)
+          current_content = NodeList.new
+          @current_column = ReVIEW::ColumnNode.new(elem.compiler, elem.position, elem.level,
+                                                  elem.label, elem.content, current_content)
+          next
+        elsif elem.kind_of?(ReVIEW::HeadlineNode) && elem.cmd && elem.cmd =~ %r|^/|
+          cmd_name = elem.cmd[1..-1]
+          if cmd_name != "column"
+            raise ReVIEW::CompileError, "#{cmd_name} is not opened."
           end
-          close_current_tagged_section(level)
-          open_tagged_section(tag, level, label, caption)
-        else
-          open_tag = tag[1..-1]
-          prev_tag_info = @tagged_section.pop
-          if prev_tag_info.nil? || prev_tag_info.first != open_tag
-            error "#{open_tag} is not opened."
-          end
-          close_tagged_section(*prev_tag_info)
+          flush_column(new_content)
+          current_content = new_content
+          next
+        elsif elem.kind_of?(ReVIEW::HeadlineNode) && @current_column && elem.level <= @current_column.level
+          flush_column(new_content)
+          current_content = new_content
         end
-      else
-        if caption.empty?
-          warn 'headline is empty.'
-        end
-        if @headline_indexs.size > (index + 1)
-          @headline_indexs = @headline_indexs[0..index]
-        end
-        if @headline_indexs[index].nil?
-          @headline_indexs[index] = 0
-        end
-        @headline_indexs[index] += 1
-        close_current_tagged_section(level)
-        @strategy.headline level, label, caption
+        current_content << elem
+      end
+      flush_column(new_content)
+      doc.content = new_content
+      doc
+    end
+
+    def flush_column(new_content)
+      if @current_column
+        new_content << @current_column
+        @current_column = nil
       end
     end
 
-    def close_current_tagged_section(level)
-      while @tagged_section.last and @tagged_section.last[1] >= level
-        close_tagged_section(* @tagged_section.pop)
-      end
-    end
+#    def comment(text)
+#      @strategy.comment(text)
+#    end
 
-    def headline(level, label, caption)
-      @strategy.headline level, label, caption
-    end
-
-    def tagged_section_init
-      @tagged_section = []
-    end
-
-    def open_tagged_section(tag, level, label, caption)
-      mid = "#{tag}_begin"
-      unless @strategy.respond_to?(mid)
-        error "strategy does not support tagged section: #{tag}"
-        headline level, label, caption
-        return
-      end
-      @tagged_section.push [tag, level]
-      @strategy.__send__ mid, level, label, caption
-    end
-
-    def close_tagged_section(tag, level)
-      mid = "#{tag}_end"
-      if @strategy.respond_to?(mid)
-        @strategy.__send__ mid, level
-      else
-        error "strategy does not support block op: #{mid}"
-      end
-    end
-
-    def close_all_tagged_section
-      until @tagged_section.empty?
-        close_tagged_section(* @tagged_section.pop)
-      end
-    end
-
-    def compile_ulist(f)
+    def parse_ulist(f)
+      current_ulist = nil
+      ulist_stack = []
       level = 0
       f.while_match(/\A\s+\*|\A\#@/) do |line|
         next if line =~ /\A\#@/
 
-        buf = [text(line.sub(/\*+/, '').strip)]
+        buf = text(line.sub(/\*+/, '').strip)
         f.while_match(/\A\s+(?!\*)\S/) do |cont|
-          buf.push text(cont.strip)
+          buf.push(*text(cont.strip))
         end
 
         line =~ /\A\s+(\*+)/
         current_level = $1.size
         if level == current_level
-          @strategy.ul_item_end
-          # body
-          @strategy.ul_item_begin buf
+          elem = UlistElementNode.new(self, position, level, buf)
+          current_ulist.add_element(elem)
         elsif level < current_level # down
           level_diff = current_level - level
           level = current_level
           (1..(level_diff - 1)).to_a.reverse_each do |i|
-            @strategy.ul_begin { i }
-            @strategy.ul_item_begin []
+            elem = UlistElementNode.new(self, position, level - i, [])
+            ulist = UlistNode.new(self, position, [elem])
+            if current_ulist
+              current_ulist.add_ulist(ulist)
+            end
+            ulist_stack << ulist
+            current_ulist = ulist_stack.last
           end
-          @strategy.ul_begin { level }
-          @strategy.ul_item_begin buf
+          elem = UlistElementNode.new(self, position, level, buf)
+          ulist = UlistNode.new(self, position, [elem])
+          if current_ulist
+            current_ulist.add_ulist(ulist)
+          end
+          ulist_stack << ulist
+          current_ulist = ulist_stack.last
         elsif level > current_level # up
           level_diff = level - current_level
           level = current_level
           (1..level_diff).to_a.reverse_each do |i|
-            @strategy.ul_item_end
-            @strategy.ul_end { level + i }
+            ulist_stack.pop
           end
-          @strategy.ul_item_end
-          # body
-          @strategy.ul_item_begin buf
+          current_ulist = ulist_stack.last
+          elem = UlistElementNode.new(self, position, level, buf)
+          current_ulist.add_element(elem)
         end
       end
 
-      (1..level).to_a.reverse_each do |i|
-        @strategy.ul_item_end
-        @strategy.ul_end { i }
+      if ulist_stack.size > 0
+        current_ulist = ulist_stack.first
       end
+
+pp [:ulist, current_ulist]
+      current_ulist
     end
 
-    def compile_olist(f)
-      @strategy.ol_begin
+    def parse_olist(f)
+      olist = OlistNode.new(self, position, [])
       f.while_match(/\A\s+\d+\.|\A\#@/) do |line|
         next if line =~ /\A\#@/
 
         num = line.match(/(\d+)\./)[1]
-        buf = [text(line.sub(/\d+\./, '').strip)]
+        buf = text(line.sub(/\d+\./, '').strip)
         f.while_match(/\A\s+(?!\d+\.)\S/) do |cont|
-          buf.push text(cont.strip)
+          buf.push(*text(cont.strip))
         end
-        @strategy.ol_item buf, num
+        olist.content << OlistElementNode.new(self, position, num, buf)
       end
-      @strategy.ol_end
+      olist
     end
 
-    def compile_dlist(f)
-      @strategy.dl_begin
+    def parse_dlist(f)
+      dlist = DlistNode.new(self, position, [])
       while /\A\s*:/ =~ f.peek
-        @strategy.dt text(f.gets.sub(/\A\s*:/, '').strip)
-        desc = f.break(/\A(\S|\s*:|\s+\d+\.\s|\s+\*\s)/).map { |line| text(line.strip) }
-        @strategy.dd(desc)
+        dt = text(f.gets.sub(/\A\s*:/, '').strip)
+        dd = []
+        f.break(/\A(\S|\s*:|\s+\d+\.\s|\s+\*\s)/).each do |line|
+          dd.push(*text(line.strip))
+        end
+        dlist.content << DlistElementNode.new(self, position, dt, dd)
         f.skip_blank_lines
         f.skip_comment_lines
       end
-      @strategy.dl_end
+      dlist
     end
 
-    def compile_paragraph(f)
+    def compile_ulist(content)
+      buf = ""
+      buf << @strategy.ul_begin
+      content.each do |element|
+        buf << element.to_doc
+      end
+      buf << @strategy.ul_end
+      buf
+    end
+
+    def compile_ul_elem(content)
+      buf = ""
+      buf << @strategy.ul_item_begin([])
+      content.each do |element|
+        buf << element.to_doc
+      end
+      buf << @strategy.ul_item_end
+      buf
+    end
+
+=begin
+    def compile_ulist(content)
+      buf0 = ""
+      level = 0
+      content.each do |element|
+        current_level = element.level
+        buf = element.to_doc
+        if level == current_level
+          buf0 << @strategy.ul_item_end
+          # body
+          buf0 << @strategy.ul_item_begin([buf])
+        elsif level < current_level # down
+          level_diff = current_level - level
+          level = current_level
+          (1..(level_diff - 1)).to_a.reverse_each do |i|
+            buf0 << @strategy.ul_begin{i}
+            buf0 << @strategy.ul_item_begin([])
+          end
+          buf0 << @strategy.ul_begin{level}
+          buf0 << @strategy.ul_item_begin([buf])
+        elsif level > current_level # up
+          level_diff = level - current_level
+          level = current_level
+          (1..level_diff).to_a.reverse_each do |i|
+            buf0 << @strategy.ul_item_end
+            buf0 << @strategy.ul_end{level + i}
+          end
+          buf0 << @strategy.ul_item_end
+          # body
+          buf0 << @strategy.ul_item_begin([buf])
+        end
+      end
+
+      (1..level).to_a.reverse_each do |i|
+        buf0 << @strategy.ul_item_end
+        buf0 << @strategy.ul_end{i}
+      end
+      buf0
+    end
+=end
+
+    def compile_olist(content)
+      buf0 = ""
+      buf0 << @strategy.ol_begin
+      content.each do |element|
+        ## XXX 1st arg should be String, not Array
+        buf0 << @strategy.ol_item(element.to_doc.split(/\n/), element.num)
+      end
+      buf0 << @strategy.ol_end
+      buf0
+    end
+
+    def compile_dlist(content)
+      buf = ""
+      buf << @strategy.dl_begin
+      content.each do |element|
+        buf << @strategy.dt(element.text.to_doc)
+        buf << @strategy.dd(element.content.map{|s| s.to_doc})
+      end
+      buf << @strategy.dl_end
+      buf
+    end
+
+    def read_paragraph(f)
       buf = []
       f.until_match(%r{\A//|\A\#@}) do |line|
         break if line.strip.empty?
-        buf.push text(line.sub(/^(\t+)\s*/) { |m| '<!ESCAPETAB!>' * m.size }.strip.gsub('<!ESCAPETAB!>', "\t"))
+        buf.push(*text(line.sub(/^(\t+)\s*/) { |m| '<!ESCAPETAB!>' * m.size }.strip.gsub('<!ESCAPETAB!>', "\t")))
       end
-      @strategy.paragraph buf
+      ParagraphNode.new(self, position, buf)
+    end
+
+    def parse_table(f)
+      # lines, id = nil, caption = nil
+      name, args, lines = read_command(f)
+      syntax = syntax_descriptor(name)
+      buf = ""
+      rows = []
+      sepidx = nil
+      lines.each_with_index do |line, idx|
+        if /\A[\=\-]{12}/ =~ line
+          # just ignore
+          # error "too many table separator" if sepidx
+          sepidx ||= idx
+          next
+        end
+        rows.push(line.strip.split(/\t+/).map { |s| s.sub(/\A\./, '') })
+      end
+pp [:tbl_rows, lines, rows]
+      rows = adjust_n_cols(rows)
+      if id
+        buf << %Q(<div id="#{normalize_id(id)}" class="table">) + "\n"
+      else
+        buf << %Q(<div class="table">) + "\n"
+      end
+      begin
+        if caption.present?
+          buf << table_header(id, caption)
+        end
+      rescue KeyError
+        error "no such table: #{id}"
+      end
+      buf << table_begin(rows.first.size)
+      return if rows.empty?
+      if sepidx
+        sepidx.times do
+          buf << tr(rows.shift.map { |s| th(s) })
+        end
+        rows.each do |cols|
+          buf << tr(cols.map { |s| td(s) })
+        end
+      else
+        rows.each do |cols|
+          h, *cs = *cols
+          buf << tr([th(h)] + cs.map { |s| td(s) })
+        end
+      end
+      buf << table_end
+      buf << '</div>' + "\n"
+      buf
+    end
+
+    def compile_paragraph(buf)
+      @strategy.paragraph(buf)
     end
 
     def read_command(f)
@@ -463,7 +636,7 @@ module ReVIEW
         if ignore_inline
           buf.push line
         elsif line !~ /\A\#@/
-          buf.push text(line.rstrip)
+          buf.push(line)
         end
       end
       unless %r{\A//\}} =~ f.peek
@@ -471,7 +644,12 @@ module ReVIEW
         return buf
       end
       f.gets # discard terminator
-      buf
+pp [:read_block, buf]
+      if ignore_inline
+        buf
+      else
+        buf.join("")
+      end
     end
 
     def parse_args(str, _name = nil)
@@ -492,10 +670,9 @@ module ReVIEW
       words
     end
 
-    def compile_command(syntax, args, lines)
-      unless @strategy.respond_to?(syntax.name)
+    def parse_command(syntax, args, lines)
+      if !syntax || (!@strategy.respond_to?(syntax.name) && !@strategy.respond_to?("node_#{syntax.name}"))
         error "strategy does not support command: //#{syntax.name}"
-        compile_unknown_command args, lines
         return
       end
       begin
@@ -505,21 +682,80 @@ module ReVIEW
         args = ['(NoArgument)'] * syntax.min_argc
       end
       if syntax.block_allowed?
-        compile_block syntax, args, lines
+        content = parse_block_content(lines, syntax.code_block?)
+        if syntax.code_block?
+          CodeBlockElementNode.new(self, position, syntax.name, args, content)
+        else
+          BlockElementNode.new(self, position, syntax.name, args, content)
+        end
       else
         if lines
           error "block is not allowed for command //#{syntax.name}; ignore"
         end
-        compile_single syntax, args
+        if syntax.code_block?
+          CodeBlockElementNode.new(self, position, syntax.name, args, nil)
+        else
+          BlockElementNode.new(self, position, syntax.name, args, nil)
+        end
       end
     end
 
-    def compile_unknown_command(args, lines)
-      @strategy.unknown_command args, lines
+    def parse_block_content(lines, code_block)
+      unless lines
+        return lines
+      end
+      pp [:lines, lines]
+      if code_block
+        return text(lines)
+      end
+      buf = []
+      list = NodeList.new
+      lines.each_line do |line|
+        if line.chomp.empty?
+          list << text(buf.join + line)
+          buf = []
+        else
+          buf << line
+        end
+      end
+      unless buf.empty?
+        list << text(buf.join)
+      end
+      pp [:parse_block_content, list]
+      list
     end
 
-    def compile_block(syntax, args, lines)
-      @strategy.__send__(syntax.name, (lines || default_block(syntax)), *args)
+    def compile_command(name, args, lines, node)
+      syntax = syntax_descriptor(name)
+      if !syntax || (!@strategy.respond_to?(syntax.name) && !@strategy.respond_to?("node_#{syntax.name}"))
+        error "strategy does not support command: //#{name}"
+        return
+      end
+      begin
+        syntax.check_args args
+      rescue ReVIEW::CompileError => err
+        error err.message
+        args = ['(NoArgument)'] * syntax.min_argc
+      end
+      if syntax.block_allowed?
+        compile_block(syntax, args, lines, node)
+      else
+        if lines
+          error "block is not allowed for command //#{syntax.name}; ignore"
+        end
+        compile_single(syntax, args, node)
+      end
+    end
+
+    def compile_block(syntax, args, lines, node)
+pp [:compile_block, lines]
+      node_name = "node_#{syntax.name}".to_sym
+      if @strategy.respond_to?(node_name)
+        @strategy.__send__(node_name, node)
+      else
+        args_conv = syntax.compile_args(args)
+        @strategy.__send__(syntax.name, (lines || default_block(syntax)), *args_conv)
+      end
     end
 
     def default_block(syntax)
@@ -529,8 +765,14 @@ module ReVIEW
       []
     end
 
-    def compile_single(syntax, args)
-      @strategy.__send__(syntax.name, *args)
+    def compile_single(syntax, args, node)
+      node_name = "node_#{syntax.name}".to_sym
+      if @strategy.respond_to?(node_name)
+        @strategy.__send__(node_name, node)
+      else
+        args_conv = syntax.compile_args(args)
+        @strategy.__send__(syntax.name, *args_conv)
+      end
     end
 
     def replace_fence(str)
@@ -542,36 +784,63 @@ module ReVIEW
     end
 
     def text(str)
-      return '' if str.empty?
+      return NodeList.new if str.empty?
       words = replace_fence(str).split(/(@<\w+>\{(?:[^\}\\]|\\.)*?\})/, -1)
       words.each do |w|
         if w.scan(/@<\w+>/).size > 1 && !/\A@<raw>/.match(w)
           error "`@<xxx>' seen but is not valid inline op: #{w}"
         end
       end
-      result = @strategy.nofunc_text(words.shift)
+      result = NodeList.new(TextNode.new(self, position, words.shift.gsub("\x01", '@')))
       until words.empty?
-        result << compile_inline(words.shift.gsub(/\\\}/, '}').gsub(/\\\\/, '\\'))
-        result << @strategy.nofunc_text(words.shift)
+        result << parse_inline(words.shift.gsub(/\\\}/, '}').gsub(/\\\\/, '\\').gsub("\x01", '@'))
+        result << TextNode.new(self, position, words.shift.gsub("\x01", '@'))
       end
-      result.gsub("\x01", '@')
+      result
     rescue => err
       error err.message
     end
     public :text # called from strategy
 
-    def compile_inline(str)
+    def parse_inline(str)
       op, arg = /\A@<(\w+)>\{(.*?)\}\z/.match(str).captures
       unless inline_defined?(op)
         raise CompileError, "no such inline op: #{op}"
       end
-      unless @strategy.respond_to?("inline_#{op}")
+      if !@strategy.respond_to?("inline_#{op}") && !@strategy.respond_to?("node_inline_#{op}")
         raise "strategy does not support inline op: @<#{op}>"
       end
-      @strategy.__send__("inline_#{op}", arg)
+      InlineElementNode.new(self, position, op, [arg])
     rescue => err
       error err.message
-      @strategy.nofunc_text(str)
+      TextNode.new(self, position, str)
+    end
+
+    def compile_inline(op, args)
+      if @strategy.respond_to?("node_inline_#{op}")
+        return @strategy.__send__("node_inline_#{op}", args)
+      end
+      if !args
+        @strategy.__send__("inline_#{op}", "")
+      else
+        ## @strategy.__send__("inline_#{op}", *(args.map(&:to_doc)))
+        @strategy.__send__("inline_#{op}", *(args.map(&:to_s)))
+      end
+#    rescue => err
+#      error err.message
+    end
+
+    def compile_text(text)
+      @strategy.nofunc_text(text)
+    end
+
+    def compile_raw(builders, content)
+      c = @strategy.class.to_s.gsub(/ReVIEW::/, '').gsub(/Builder/, '').downcase
+      if !builders || builders.include?(c)
+        content.gsub("\\n", "\n")
+      else
+        ""
+      end
     end
 
     def warn(msg)

@@ -19,6 +19,11 @@ class NodeList
     self
   end
 
+  def push(*elem)
+    @content.push(*elem)
+    self
+  end
+
   def +(elem)
     @content += elem.content
     self
@@ -39,6 +44,10 @@ class NodeList
 
   def each(&block)
     @content.each(&block)
+  end
+
+  def to_json
+    "{\"_NodeList\":" + @content.to_json + "}"
   end
 
   def flatten

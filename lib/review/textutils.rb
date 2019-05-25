@@ -13,6 +13,9 @@ module ReVIEW
     end
 
     def split_paragraph(lines)
+      pp [:split_para, lines]
+      return lines.map{|i| ParagraphNode.new(self.compiler, 0, i).to_doc.chomp}
+      raise NotImplementedError, "ignore split_pargraph"
       pre = pre_paragraph
       post = post_paragraph
       trimmed_lines = trim_lines(lines)

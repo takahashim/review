@@ -31,6 +31,7 @@ module ReVIEW
     end
 
     attr_accessor :doc_status
+    attr_reader :compiler
 
     def initialize(strict = false, *args)
       @strict = strict
@@ -102,6 +103,7 @@ module ReVIEW
     ## for //firstlinenum[num]
     def firstlinenum(num)
       @first_line_num = num.to_i
+      nil
     end
 
     def line_num
@@ -228,6 +230,10 @@ module ReVIEW
     end
 
     def compile_inline(s)
+      @compiler.text(s).to_doc
+    end
+
+    def compile_inline_to_ast(s)
       @compiler.text(s)
     end
 

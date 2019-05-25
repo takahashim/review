@@ -91,6 +91,7 @@ module ReVIEW
     attr_reader :content
 
     def to_doc
+pp [:para, @content]
       #content = @content.map(&:to_doc)
       content = super.split(/\n/)
       @compiler.compile_paragraph(content)
@@ -115,6 +116,7 @@ module ReVIEW
     def to_doc
       # content_str = super
       ## args = @args.map(&:to_doc)
+pp [:BE_to_doc, @content]
       if @content
         content_lines = @content.map(&:to_doc)
       else
@@ -399,7 +401,7 @@ module ReVIEW
     end
 
     def to_doc
-      @content.map(&:to_doc).join("")
+      @compiler.compile_ul_elem(@content)
     end
 
     def concat(elem)
