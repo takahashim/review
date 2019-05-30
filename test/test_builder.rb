@@ -3,19 +3,13 @@ require 'review/builder'
 
 require 'review/book'
 
-class MockCompiler
-  def text(s)
-    [:text, s]
-  end
-end
-
 class BuidlerTest < Test::Unit::TestCase
   include ReVIEW
 
   def setup
     @b = Builder.new
     chap = ReVIEW::Book::Chapter.new(nil, nil, '-', nil)
-    @b.bind(MockCompiler.new, chap, nil)
+    @b.bind(ReVIEW::Compiler.new(@b), chap, nil)
   end
 
   def test_initialize
@@ -62,7 +56,7 @@ class BuidlerTest < Test::Unit::TestCase
 
   def test_compile_inline
     text = 'abc'
-    assert_equal [:text, text], @b.compile_inline(text)
+    assert_equal 'abc', @b.compile_inline(text)
   end
 
   def test_inline_ruby
@@ -77,7 +71,7 @@ class BuidlerTest < Test::Unit::TestCase
 
   def test_compile_inline_backslash
     text = 'abc\\d\\#a'
-    assert_equal [:text, text], @b.compile_inline(text)
+    assert_equal text, @b.compile_inline(text)
   end
 
   def test_inline_missing_ref

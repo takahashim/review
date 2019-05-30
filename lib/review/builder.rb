@@ -645,6 +645,10 @@ EOTGNUPLOT
       end
     end
 
+    def nofunc_text(str)
+      str
+    end
+
     def escape(str)
       str
     end
