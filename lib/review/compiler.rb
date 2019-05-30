@@ -1,4 +1,4 @@
-# Copyright (c) 2009-2018 Minero Aoki, Kenshi Muto
+# Copyright (c) 2009-2019 Minero Aoki, Kenshi Muto
 # Copyright (c) 2002-2007 Minero Aoki
 #
 # This program is free software.
@@ -145,7 +145,7 @@ module ReVIEW
     defblock :bibpaper, 2..3, true
     defblock :doorquote, 1
     defblock :talk, 0
-    defcodeblock :texequation, 0
+    defcodeblock :texequation, 0..2
     defblock :graph, 1..3
     defblock :indepimage, 1..3, true
     defblock :numberlessimage, 1..3, true
@@ -188,6 +188,7 @@ module ReVIEW
     definline :icon
     definline :list
     definline :table
+    definline :eq
     definline :fn
     definline :kw
     definline :ruby
@@ -202,6 +203,7 @@ module ReVIEW
     definline :recipe
     definline :column
     definline :tcy
+    definline :balloon
 
     definline :abbr
     definline :acronym
@@ -232,7 +234,6 @@ module ReVIEW
     definline :hidx
     definline :comment
     definline :include
-    definline :tcy
     definline :embed
     definline :pageref
     definline :w
@@ -659,7 +660,7 @@ pp [:read_block, buf]
       while word = scanner.scan(/(\[\]|\[.*?[^\\]\])/)
         w2 = word[1..-2].gsub(/\\(.)/) do
           ch = $1
-          (ch == ']' or ch == '\\') ? ch : '\\' + ch
+          [']', '\\'].include?(ch) ? ch : '\\' + ch
         end
         words << w2
       end
@@ -677,8 +678,8 @@ pp [:read_block, buf]
       end
       begin
         syntax.check_args args
-      rescue CompileError => err
-        error err.message
+      rescue CompileError => e
+        error e.message
         args = ['(NoArgument)'] * syntax.min_argc
       end
       if syntax.block_allowed?
@@ -778,9 +779,17 @@ pp [:compile_block, lines]
     def replace_fence(str)
       str.gsub(/@<(\w+)>([$|])(.+?)(\2)/) do
         op = $1
-        arg = $3.gsub('@', "\x01").gsub('\\}') { '\\\\}' }.gsub('}') { '\}' }.sub(/(?:\\)+$/) { |m| '\\\\' * m.size }
-        "@<#{op}>{#{arg}}"
+        arg = $3
+        if arg =~ /[\x01\x02\x03\x04]/
+          error "invalid character in '#{str}'"
+        end
+        replaced = arg.gsub('@', "\x01").gsub('\\', "\x02").gsub('{', "\x03").gsub('}', "\x04")
+        "@<#{op}>{#{replaced}}"
       end
+    end
+
+    def revert_replace_fence(str)
+      str.gsub("\x01", '@').gsub("\x02", '\\').gsub("\x03", '{').gsub("\x04", '}')
     end
 
     def text(str)
@@ -791,14 +800,14 @@ pp [:compile_block, lines]
           error "`@<xxx>' seen but is not valid inline op: #{w}"
         end
       end
-      result = NodeList.new(TextNode.new(self, position, words.shift.gsub("\x01", '@')))
+      result = NodeList.new(TextNode.new(self, position, revert_replace_fence(words.shift)))
       until words.empty?
-        result << parse_inline(words.shift.gsub(/\\\}/, '}').gsub(/\\\\/, '\\').gsub("\x01", '@'))
-        result << TextNode.new(self, position, words.shift.gsub("\x01", '@'))
+        result << parse_inline(revert_replace_fence(words.shift.gsub(/\\\}/, '}').gsub(/\\\\/, '\\')))
+        result << TextNode.new(self, position, revert_replace_fence(words.shift))
       end
       result
-    rescue => err
-      error err.message
+    rescue => e
+      error e.message
     end
     public :text # called from strategy
 
@@ -811,8 +820,8 @@ pp [:compile_block, lines]
         raise "strategy does not support inline op: @<#{op}>"
       end
       InlineElementNode.new(self, position, op, [arg])
-    rescue => err
-      error err.message
+    rescue => e
+      error e.message
       TextNode.new(self, position, str)
     end
 
@@ -826,8 +835,8 @@ pp [:compile_block, lines]
         ## @strategy.__send__("inline_#{op}", *(args.map(&:to_doc)))
         @strategy.__send__("inline_#{op}", *(args.map(&:to_s)))
       end
-#    rescue => err
-#      error err.message
+#    rescue => e
+#      error e.message
     end
 
     def compile_text(text)

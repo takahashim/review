@@ -45,6 +45,10 @@ module EPUBMaker
       merge_config(@config.deep_merge(loader.load_file(file)))
     end
 
+    def warn(msg)
+      @logger.warn(msg)
+    end
+
     # Construct producer object.
     # +config+ takes initial parameter hash. This parameters can be overriden by EPUBMaker#load or EPUBMaker#merge_config.
     # +version+ takes EPUB version (default is 2).
@@ -54,6 +58,7 @@ module EPUBMaker
       @epub = nil
       @config['epubversion'] = version unless version.nil?
       @res = ReVIEW::I18n
+      @logger = ReVIEW.logger
 
       merge_config(config) if config
     end
@@ -187,7 +192,8 @@ module EPUBMaker
       current = Dir.pwd
       basedir ||= current
 
-      new_tmpdir = tmpdir.nil? ? Dir.mktmpdir : tmpdir
+      # use Dir to solve a path for Windows (see #1011)
+      new_tmpdir = Dir[File.join(tmpdir.nil? ? Dir.mktmpdir : tmpdir)][0]
       if epubfile !~ %r{\A/}
         epubfile = "#{current}/#{epubfile}"
       end
@@ -231,7 +237,7 @@ module EPUBMaker
       defaults = ReVIEW::Configure.new.merge(
         'language' => 'ja',
         'date' => Time.now.strftime('%Y-%m-%d'),
-        'modified' => Time.now.strftime('%Y-%02m-%02dT%02H:%02M:%02SZ'),
+        'modified' => Time.now.utc.strftime('%Y-%02m-%02dT%02H:%02M:%02SZ'),
         'isbn' => nil,
         'toclevel' => 2,
         'stylesheet' => [],
@@ -264,7 +270,8 @@ module EPUBMaker
           'rename_for_legacy' => nil,
           'verify_target_images' => nil,
           'force_include_images' => [],
-          'cover_linear' => nil
+          'cover_linear' => nil,
+          'back_footnote' => nil
         },
         'externallink' => true,
         'contentdir' => '.',

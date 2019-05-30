@@ -16,10 +16,6 @@ module ReVIEW
       attr_reader :path
       attr_accessor :content
 
-      def env
-        @book
-      end
-
       def dirname
         return nil unless @path
         File.dirname(@path)
@@ -84,6 +80,15 @@ module ReVIEW
       def table_index
         @table_index ||= TableIndex.parse(lines)
         @table_index
+      end
+
+      def equation(id)
+        equation_index[id]
+      end
+
+      def equation_index
+        @equation_index ||= EquationIndex.parse(lines)
+        @equation_index
       end
 
       def footnote(id)

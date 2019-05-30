@@ -76,9 +76,10 @@ module ReVIEW
         'image_scale2width' => true,
         'footnotetext' => nil,
         'texcommand' => 'uplatex',
-        'texdocumentclass' => ['jsbook', 'uplatex,oneside'],
+        'texoptions' => '-interaction=nonstopmode -file-line-error',
+        '_texdocumentclass' => ['review-jsbook', ''],
         'dvicommand' => 'dvipdfmx',
-        'dvioptions' => '-d 5',
+        'dvioptions' => '-d 5 -z 9',
         # for PDFMaker
         'pdfmaker' => {
           'makeindex' => nil, # Make index page
@@ -88,6 +89,18 @@ module ReVIEW
           'makeindex_dic' => nil,
           'makeindex_mecab' => true,
           'makeindex_mecab_opts' => '-Oyomi'
+        },
+        'imgmath_options' => {
+          'format' => 'png',
+          'converter' => 'pdfcrop', # dvipng | pdfcrop
+          'pdfcrop_cmd' => 'pdfcrop --hires %i %o',
+          'extract_singlepage' => nil,
+          'pdfextract_cmd' => 'pdfjam -q --outfile %o %i %p',
+          'preamble_file' => nil,
+          'fontsize' => 10,
+          'lineheight' => 10 * 1.2,
+          'pdfcrop_pixelize_cmd' => 'pdftocairo -png -r 90 -f %p -l %p -singlefile %i %O',
+          'dvipng_cmd' => 'dvipng -T tight -z 9 -p %p -l %p -o %o %i'
         }
       ]
       conf.maker = nil

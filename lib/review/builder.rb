@@ -256,13 +256,23 @@ module ReVIEW
     end
 
     def inline_list(id)
-      "#{I18n.t('list')}#{@chapter.list(id).number}"
+      chapter, id = extract_chapter_id(id)
+      if get_chap(chapter)
+        %Q(#{I18n.t('list')}#{I18n.t('format_number', [get_chap(chapter), chapter.list(id).number])})
+      else
+        %Q(#{I18n.t('list')}#{I18n.t('format_number_without_chapter', [chapter.list(id).number])})
+      end
     rescue KeyError
       error "unknown list: #{id}"
     end
 
     def inline_img(id)
-      "#{I18n.t('image')}#{@chapter.image(id).number}"
+      chapter, id = extract_chapter_id(id)
+      if get_chap(chapter)
+        %Q(#{I18n.t('image')}#{I18n.t('format_number', [get_chap(chapter), chapter.image(id).number])})
+      else
+        %Q(#{I18n.t('image')}#{I18n.t('format_number_without_chapter', [chapter.image(id).number])})
+      end
     rescue KeyError
       error "unknown image: #{id}"
     end
@@ -278,9 +288,25 @@ module ReVIEW
     end
 
     def inline_table(id)
-      "#{I18n.t('table')}#{@chapter.table(id).number}"
+      chapter, id = extract_chapter_id(id)
+      if get_chap(chapter)
+        %Q(#{I18n.t('table')}#{I18n.t('format_number', [get_chap(chapter), chapter.table(id).number])})
+      else
+        %Q(#{I18n.t('table')}#{I18n.t('format_number_without_chapter', [chapter.table(id).number])})
+      end
     rescue KeyError
       error "unknown table: #{id}"
+    end
+
+    def inline_eq(id)
+      chapter, id = extract_chapter_id(id)
+      if get_chap(chapter)
+        %Q(#{I18n.t('equation')}#{I18n.t('format_number', [get_chap(chapter), chapter.equation(id).number])})
+      else
+        %Q(#{I18n.t('equation')}#{I18n.t('format_number_without_chapter', [chapter.equation(id).number])})
+      end
+    rescue KeyError
+      error "unknown equation: #{id}"
     end
 
     def inline_fn(id)
@@ -362,7 +388,7 @@ module ReVIEW
     end
 
     def inline_column_chap(chapter, id)
-      chapter.column(id).caption
+      I18n.t('column', chapter.column(id).caption)
     end
 
     def inline_pageref(id)
@@ -371,6 +397,10 @@ module ReVIEW
 
     def inline_tcy(arg)
       "#{arg}[rotate 90 degree]"
+    end
+
+    def inline_balloon(arg)
+      "← #{arg}"
     end
 
     def inline_w(s)
@@ -462,7 +492,9 @@ module ReVIEW
     def extract_chapter_id(chap_ref)
       m = /\A([\w+-]+)\|(.+)/.match(chap_ref)
       if m
-        return [@book.contents.detect { |chap| chap.id == m[1] }, m[2]]
+        ch = @book.contents.detect { |chap| chap.id == m[1] }
+        raise KeyError unless ch
+        return [ch, m[2]]
       end
       [@chapter, chap_ref]
     end
@@ -596,6 +628,10 @@ EOTGNUPLOT
       else
         args
       end
+    end
+
+    def over_secnolevel?(n)
+      @book.config['secnolevel'] >= n.to_s.split('.').size
     end
 
     ## override TextUtils::detab

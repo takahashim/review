@@ -10,6 +10,8 @@ require 'yaml'
 require 'fileutils'
 require 'erb'
 require 'tmpdir'
+require 'open3'
+require 'shellwords'
 
 require 'review/i18n'
 require 'review/book'
@@ -26,23 +28,29 @@ module ReVIEW
     include FileUtils
     include ReVIEW::LaTeXUtils
 
-    attr_accessor :config, :basedir, :basehookdir
+    attr_accessor :config, :basedir
 
     def initialize
       @basedir = nil
-      @basehookdir = nil
       @logger = ReVIEW.logger
       @input_files = Hash.new { |h, key| h[key] = '' }
+      @mastertex = '__REVIEW_BOOK__'
     end
 
     def system_with_info(*args)
       @logger.info args.join(' ')
-      Kernel.system(*args)
+      out, status = Open3.capture2e(*args)
+      unless status.success?
+        @logger.error "execution error\n\nError log:\n" + out
+      end
     end
 
     def system_or_raise(*args)
       @logger.info args.join(' ')
-      Kernel.system(*args) or raise("failed to run command: #{args.join(' ')}")
+      out, status = Open3.capture2e(*args)
+      unless status.success?
+        error "failed to run command: #{args.join(' ')}\n\nError log:\n" + out
+      end
     end
 
     def error(msg)
@@ -79,7 +87,7 @@ module ReVIEW
       return unless @compile_errors
 
       if ignore_errors
-        $stderr.puts 'compile error, but try to generate PDF file'
+        @logger.info 'compile error, but try to generate PDF file'
       else
         error 'compile error, No PDF file output.'
       end
@@ -123,16 +131,25 @@ module ReVIEW
       rescue => e
         error "yaml error #{e.message}"
       end
+
       # YAML configs will be overridden by command line options.
       @config.deep_merge!(cmd_config)
       I18n.setup(@config['language'])
-      @basedir = File.dirname(yamlfile)
-      @basehookdir = File.absolute_path(File.dirname(yamlfile))
+      @basedir = File.absolute_path(File.dirname(yamlfile))
 
       begin
         @config.check_version(ReVIEW::VERSION)
       rescue ReVIEW::ConfigError => e
         warn e.message
+      end
+
+      # version 2 compatibility
+      unless @config['texdocumentclass']
+        if @config.check_version(2, exception: false)
+          @config['texdocumentclass'] = ['jsbook', 'uplatex,oneside']
+        else
+          @config['texdocumentclass'] = @config['_texdocumentclass']
+        end
       end
 
       begin
@@ -147,6 +164,7 @@ module ReVIEW
       input_files = Hash.new { |h, key| h[key] = '' }
       book.parts.each do |part|
         if part.name.present?
+          @config['use_part'] = true
           if part.file?
             output_chaps(part.name, yamlfile)
             input_files['CHAPS'] << %Q(\\input{#{part.name}.tex}\n)
@@ -171,7 +189,7 @@ module ReVIEW
     def build_pdf
       template = template_content
       Dir.chdir(@path) do
-        File.open('./book.tex', 'wb') { |f| f.write(template) }
+        File.open("./#{@mastertex}.tex", 'wb') { |f| f.write(template) }
 
         call_hook('hook_beforetexcompile')
 
@@ -180,47 +198,53 @@ module ReVIEW
           warn 'command configuration is prohibited in safe mode. ignored.'
           texcommand = ReVIEW::Configure.values['texcommand']
           dvicommand = ReVIEW::Configure.values['dvicommand']
-          dvioptions = ReVIEW::Configure.values['dvioptions']
-          texoptions = ReVIEW::Configure.values['texoptions']
+          dvioptions = ReVIEW::Configure.values['dvioptions'].shellsplit
+          texoptions = ReVIEW::Configure.values['texoptions'].shellsplit
           makeindex_command = ReVIEW::Configure.values['pdfmaker']['makeindex_command']
-          makeindex_options = ReVIEW::Configure.values['pdfmaker']['makeindex_options']
+          makeindex_options = ReVIEW::Configure.values['pdfmaker']['makeindex_options'].shellsplit
           makeindex_sty = ReVIEW::Configure.values['pdfmaker']['makeindex_sty']
           makeindex_dic = ReVIEW::Configure.values['pdfmaker']['makeindex_dic']
         else
-          texcommand = @config['texcommand'] if @config['texcommand']
-          dvicommand = @config['dvicommand'] if @config['dvicommand']
-          dvioptions = @config['dvioptions'] if @config['dvioptions']
-          texoptions = @config['texoptions'] if @config['texoptions']
+          unless @config['texcommand'].present?
+            error "texcommand isn't defined."
+          end
+          texcommand = @config['texcommand']
+          dvicommand = @config['dvicommand']
+          @config['dvioptions'] = '' unless @config['dvioptions']
+          dvioptions = @config['dvioptions'].shellsplit
+          @config['texoptions'] = '' unless @config['texoptions']
+          texoptions = @config['texoptions'].shellsplit
           makeindex_command = @config['pdfmaker']['makeindex_command']
-          makeindex_options = @config['pdfmaker']['makeindex_options']
+          @config['pdfmaker']['makeindex_options'] = '' unless @config['pdfmaker']['makeindex_options']
+          makeindex_options = @config['pdfmaker']['makeindex_options'].shellsplit
           makeindex_sty = @config['pdfmaker']['makeindex_sty']
           makeindex_dic = @config['pdfmaker']['makeindex_dic']
         end
 
         if makeindex_sty.present?
           makeindex_sty = File.absolute_path(makeindex_sty, @basedir)
-          makeindex_options += " -s #{makeindex_sty}" if File.exist?(makeindex_sty)
+          makeindex_options += ['-s', makeindex_sty] if File.exist?(makeindex_sty)
         end
         if makeindex_dic.present?
           makeindex_dic = File.absolute_path(makeindex_dic, @basedir)
-          makeindex_options += " -d #{makeindex_dic}" if File.exist?(makeindex_dic)
+          makeindex_options += ['-d', makeindex_dic] if File.exist?(makeindex_dic)
         end
 
         2.times do
-          system_or_raise("#{texcommand} #{texoptions} book.tex")
+          system_or_raise(*[texcommand, texoptions, "#{@mastertex}.tex"].flatten.compact)
         end
 
         call_hook('hook_beforemakeindex')
-        if @config['pdfmaker']['makeindex'] && File.exist?('book.idx')
-          system_or_raise("#{makeindex_command} #{makeindex_options} book")
+        if @config['pdfmaker']['makeindex'] && File.exist?("#{@mastertex}.idx")
+          system_or_raise(*[makeindex_command, makeindex_options, @mastertex].flatten.compact)
         end
         call_hook('hook_aftermakeindex')
 
-        system_or_raise("#{texcommand} #{texoptions} book.tex")
+        system_or_raise(*[texcommand, texoptions, "#{@mastertex}.tex"].flatten.compact)
         call_hook('hook_aftertexcompile')
 
-        if File.exist?('book.dvi')
-          system_or_raise("#{dvicommand} #{dvioptions} book.dvi")
+        if File.exist?("#{@mastertex}.dvi") && dvicommand.present?
+          system_or_raise(*[dvicommand, dvioptions, "#{@mastertex}.dvi"].flatten.compact)
           call_hook('hook_afterdvipdf')
         end
       end
@@ -233,7 +257,7 @@ module ReVIEW
       begin
         @compile_errors = nil
 
-        book = ReVIEW::Book.load(@basedir)
+        book = ReVIEW::Book.load(File.dirname(yamlfile))
         book.config = @config
         @converter = ReVIEW::Converter.new(book, ReVIEW::LATEXBuilder.new)
 
@@ -255,14 +279,14 @@ module ReVIEW
 
         build_pdf
 
-        FileUtils.cp(File.join(@path, 'book.pdf'), pdf_filepath)
+        FileUtils.cp(File.join(@path, "#{@mastertex}.pdf"), pdf_filepath)
       ensure
         remove_entry_secure @path unless @config['debug']
       end
     end
 
     def output_chaps(filename, _yamlfile)
-      $stderr.puts "compiling #{filename}.tex"
+      @logger.info "compiling #{filename}.tex"
       begin
         @converter.convert(filename + '.re', File.join(@path, filename + '.tex'))
       rescue => e
@@ -370,9 +394,13 @@ module ReVIEW
     end
 
     def erb_config
+      @texcompiler = File.basename(@config['texcommand'], '.*')
       dclass = @config['texdocumentclass'] || []
-      @documentclass = dclass[0] || 'jsbook'
-      @documentclassoption = dclass[1] || 'uplatex,oneside'
+      @documentclass = dclass[0] || 'review-jsbook'
+      @documentclassoption = dclass[1] || ''
+      if @config['dvicommand'] =~ /dvipdfmx/ && @documentclassoption !~ /dvipdfmx/
+        @documentclassoption = "dvipdfmx,#{@documentclassoption}".sub(/,\Z/, '')
+      end
 
       @okuduke = make_colophon
       @authors = make_authors
@@ -397,10 +425,19 @@ module ReVIEW
 
       @coverimageoption =
         if @documentclass == 'ubook' || @documentclass == 'utbook'
-          'width=\\textheight,height=\\textwidth,keepaspectratio,angle=90'
+          'keepaspectratio,angle=90'
         else
-          'width=\\textwidth,height=\\textheight,keepaspectratio'
+          'keepaspectratio'
         end
+
+      if @config.check_version('2', exception: false)
+        @coverimageoption =
+          if @documentclass == 'ubook' || @documentclass == 'utbook'
+            'width=\\textheight,height=\\textwidth,keepaspectratio,angle=90'
+          else
+            'width=\\textwidth,height=\\textheight,keepaspectratio'
+          end
+      end
 
       @locale_latex = {}
       part_tuple = I18n.get('part').split(/\%[A-Za-z]{1,3}/, 2)
@@ -412,13 +449,12 @@ module ReVIEW
       @locale_latex['postchaptername'] = chapter_tuple[1]
       @locale_latex['preappendixname'] = appendix_tuple[0]
       @locale_latex['postappendixname'] = appendix_tuple[1]
-      @texcompiler = File.basename(@config['texcommand'], '.*')
     end
 
     def erb_content(file)
       @texcompiler = File.basename(@config['texcommand'], '.*')
       erb = ReVIEW::Template.load(file, '-')
-      puts "erb processes #{File.basename(file)}" if @config['debug']
+      @logger.debug "erb processes #{File.basename(file)}" if @config['debug']
       erb.result(binding)
     end
 
@@ -428,11 +464,13 @@ module ReVIEW
 
     def template_content
       template = File.expand_path('./latex/layout.tex.erb', ReVIEW::Template::TEMPLATE_DIR)
-      if @config['review_version'] && @config['review_version'].to_f < 3
+      if @config.check_version('2', exception: false)
         template = File.expand_path('./latex-compat2/layout.tex.erb', ReVIEW::Template::TEMPLATE_DIR)
       end
       layout_file = File.join(@basedir, 'layouts', 'layout.tex.erb')
-      template = layout_file if File.exist?(layout_file)
+      if File.exist?(layout_file)
+        template = layout_file
+      end
       erb_content(template)
     end
 
@@ -459,11 +497,11 @@ module ReVIEW
 
     def call_hook(hookname)
       return if !@config['pdfmaker'].is_a?(Hash) || @config['pdfmaker'][hookname].nil?
-      hook = File.absolute_path(@config['pdfmaker'][hookname], @basehookdir)
+      hook = File.absolute_path(@config['pdfmaker'][hookname], @basedir)
       if ENV['REVIEW_SAFE_MODE'].to_i & 1 > 0
         warn 'hook configuration is prohibited in safe mode. ignored.'
       else
-        system_or_raise("#{hook} #{Dir.pwd} #{@basehookdir}")
+        system_or_raise(hook, Dir.pwd, @basedir)
       end
     end
   end

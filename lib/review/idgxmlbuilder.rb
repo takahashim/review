@@ -16,7 +16,7 @@ module ReVIEW
     include TextUtils
     include HTMLUtils
 
-    %i[ttbold hint maru keytop labelref ref balloon].each { |e| Compiler.definline(e) }
+    %i[ttbold hint maru keytop labelref ref].each { |e| Compiler.definline(e) }
     Compiler.defsingle(:dtp, 1)
 
     Compiler.defblock(:insn, 0..1)
@@ -264,14 +264,7 @@ module ReVIEW
     end
 
     def inline_list(id)
-      chapter, id = extract_chapter_id(id)
-      if get_chap(chapter).nil?
-        "<span type='list'>#{I18n.t('list')}#{I18n.t('format_number_without_chapter', [chapter.list(id).number])}</span>"
-      else
-        "<span type='list'>#{I18n.t('list')}#{I18n.t('format_number', [get_chap(chapter), chapter.list(id).number])}</span>"
-      end
-    rescue KeyError
-      error "unknown list: #{id}"
+      "<span type='list'>#{super(id)}</span>"
     end
 
     def list_header(id, caption, _lang)
@@ -369,25 +362,15 @@ module ReVIEW
     end
 
     def inline_table(id)
-      chapter, id = extract_chapter_id(id)
-      if get_chap(chapter).nil?
-        "<span type='table'>#{I18n.t('table')}#{I18n.t('format_number_without_chapter', [chapter.table(id).number])}</span>"
-      else
-        "<span type='table'>#{I18n.t('table')}#{I18n.t('format_number', [get_chap(chapter), chapter.table(id).number])}</span>"
-      end
-    rescue KeyError
-      error "unknown table: #{id}"
+      "<span type='table'>#{super(id)}</span>"
     end
 
     def inline_img(id)
-      chapter, id = extract_chapter_id(id)
-      if get_chap(chapter).nil?
-        "<span type='image'>#{I18n.t('image')}#{I18n.t('format_number_without_chapter', [chapter.image(id).number])}</span>"
-      else
-        "<span type='image'>#{I18n.t('image')}#{I18n.t('format_number', [get_chap(chapter), chapter.image(id).number])}</span>"
-      end
-    rescue KeyError
-      error "unknown image: #{id}"
+      "<span type='image'>#{super(id)}</span>"
+    end
+
+    def inline_eq(id)
+      "<span type='eq'>#{super(id)}</span>"
     end
 
     def inline_imgref(id)
@@ -440,13 +423,26 @@ module ReVIEW
       end
     end
 
-    def texequation(lines)
+    def texequation(lines, id = nil, caption = '')
       @texblockequation += 1
+      if id
+        puts '<equationblock>'
+        if get_chap.nil?
+          puts %Q(<caption>#{I18n.t('equation')}#{I18n.t('format_number_without_chapter', [@chapter.equation(id).number])}#{I18n.t('caption_prefix_idgxml')}#{compile_inline(caption)}</caption>)
+        else
+          puts %Q(<caption>#{I18n.t('equation')}#{I18n.t('format_number', [get_chap, @chapter.equation(id).number])}#{I18n.t('caption_prefix_idgxml')}#{compile_inline(caption)}</caption>)
+        end
+      end
+
       puts %Q(<replace idref="texblock-#{@texblockequation}">)
       puts '<pre>'
       puts lines.join("\n")
       puts '</pre>'
       puts '</replace>'
+
+      if id
+        puts '</equationblock>'
+      end
     end
 
     def table(lines, id = nil, caption = nil)
@@ -585,11 +581,11 @@ module ReVIEW
     end
 
     def comment(lines, comment = nil)
-      return true unless @book.config['draft']
+      return unless @book.config['draft']
       lines ||= []
-      lines.unshift comment unless comment.blank?
+      lines.unshift escape(comment) unless comment.blank?
       str = lines.join("\n")
-      print "<msg>#{escape(str)}</msg>"
+      print "<msg>#{str}</msg>"
     end
 
     def inline_comment(str)
@@ -768,6 +764,19 @@ module ReVIEW
     end
 
     def nonum_end(level)
+    end
+
+    def notoc_begin(level, _label, caption)
+      puts %Q(<title aid:pstyle="h#{level}">#{compile_inline(caption)}</title>)
+    end
+
+    def notoc_end(level)
+    end
+
+    def nodisp_begin(level, label, caption)
+    end
+
+    def nodisp_end(level)
     end
 
     def circle_begin(_level, _label, caption)
@@ -1054,20 +1063,30 @@ module ReVIEW
     end
 
     def inline_chapref(id)
-      chs = ['', '「', '」']
-      if @book.config['chapref']
-        chs2 = @book.config['chapref'].split(',')
-        if chs2.size != 3
-          error '--chapsplitter must have exactly 3 parameters with comma.'
-        else
-          chs = chs2
+      if @book.config.check_version('2', exception: false)
+        # backward compatibility
+        chs = ['', '「', '」']
+        if @book.config['chapref']
+          chs2 = @book.config['chapref'].split(',')
+          if chs2.size != 3
+            error '--chapsplitter must have exactly 3 parameters with comma.'
+          else
+            chs = chs2
+          end
         end
-      end
-      s = "#{chs[0]}#{@book.chapter_index.number(id)}#{chs[1]}#{@book.chapter_index.title(id)}#{chs[2]}"
-      if @book.config['chapterlink']
-        %Q(<link href="#{id}">#{s}</link>)
+        s = "#{chs[0]}#{@book.chapter_index.number(id)}#{chs[1]}#{@book.chapter_index.title(id)}#{chs[2]}"
+        if @book.config['chapterlink']
+          %Q(<link href="#{id}">#{s}</link>)
+        else
+          s
+        end
       else
-        s
+        title = super
+        if @book.config['chapterlink']
+          %Q(<link href="#{id}">#{title}</link>)
+        else
+          title
+        end
       end
     rescue KeyError
       error "unknown chapter: #{id}"
@@ -1127,13 +1146,12 @@ module ReVIEW
     end
 
     def inline_hd_chap(chap, id)
-      if chap.number
-        n = chap.headline_index.number(id)
-        if @book.config['secnolevel'] >= n.split('.').size
-          return I18n.t('chapter_quote', "#{n}　#{compile_inline(chap.headline(id).caption)}")
-        end
+      n = chap.headline_index.number(id)
+      if n.present? && chap.number && over_secnolevel?(n)
+        I18n.t('hd_quote', [n, compile_inline(chap.headline(id).caption)])
+      else
+        I18n.t('hd_quote_without_number', compile_inline(chap.headline(id).caption))
       end
-      I18n.t('chapter_quote', compile_inline(chap.headline(id).caption))
     rescue KeyError
       error "unknown headline: #{id}"
     end

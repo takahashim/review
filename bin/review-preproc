@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 #
-# Copyright (c) 2010-2014 Minero Aoki, Kenshi Muto
+# Copyright (c) 2010-2019 Minero Aoki, Kenshi Muto
 #               1999-2007 Minero Aoki
 #
 # This program is free software.
@@ -52,7 +52,6 @@ def main
   opts.on('-c', '--check', 'Check if preprocess is needed.') { mode = :check }
   opts.on('-d', '--diff', 'Show diff from current file.') { mode = :diff }
   opts.on('--replace', 'Replace file by preprocessed one.') { mode = :replace }
-  opts.on('-s', '--strip', 'Strip preprocessor tags.') { mode = :strip }
   opts.on('--tabwidth=WIDTH', "Replace tabs with space characters. (0: don't replace)") { |width| param['tabwidth'] = width.to_i }
   opts.on('--help', 'Print this message and quit.') do
     puts opts.help
@@ -60,8 +59,8 @@ def main
   end
   begin
     opts.parse!
-  rescue OptionParser::ParseError => err
-    @logger.error err.message
+  rescue OptionParser::ParseError => e
+    @logger.error e.message
     $stderr.puts opts.help
     exit 1
   end
@@ -88,17 +87,13 @@ def main
       ensure
         FileUtils.rm_f tmp
       end
-    when :strip
-      File.open(path) do |f|
-        ReVIEW::Preprocessor::Strip.new(f).each { |line| puts line }
-      end
     else
       raise "must not happen: #{mode}"
     end
   end
-rescue ReVIEW::Error => err
+rescue ReVIEW::Error => e
   raise if $DEBUG
-  @logger.error err.message
+  @logger.error e.message
   exit 1
 end
 

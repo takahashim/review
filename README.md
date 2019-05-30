@@ -25,7 +25,9 @@ Re:VIEW uses its original format('Re:VIEW format') as source files.  See doc/for
 There are two commands generate files directly.
 
 * review-epubmaker: generate EPUB file.
-* review-pdfmaker: generate PDF file using LaTeX(ptexlive).
+* review-pdfmaker: generate PDF file using LaTeX (TeXLive).
+* review-textmaker: generate text files.
+* review-webmaker: generate Web pages.
 
 And some useful commands.
 
@@ -33,6 +35,8 @@ And some useful commands.
 * review-vol: figure out size of Re:VIEW files.
 * review-index: generate index with various format.
 * review-preproc: preprocessor.
+* review-epub2html: generate single HTML file from EPUB for CSS typesetting.
+* review-update: update project files.
 
 ## Installation
 
@@ -57,7 +61,9 @@ $ review-init hello
 $ cd hello
 $ (... add and edit *.re file, config.yml and catalog.yml ...)
 $ rake epub  ## generating EPUB
-$ rake pdf   ## generating PDF(Requirement TeX)
+$ rake pdf   ## generating PDF (Requirement TeXLive)
+$ rake text  ## generating texts
+$ rake web   ## generating Web pages
 ```
 
 For further information, see [doc/quickstart.md](https://github.com/kmuto/review/blob/master/doc/quickstart.md)
@@ -93,10 +99,17 @@ For further information, see [doc/quickstart.md](https://github.com/kmuto/review
 
 ## License
 
-LGPL. See [COPYING](https://github.com/kmuto/review/blob/master/COPYING) file.
+Main part of Re:VIEW is applied GNU Lesser General Public License (LGPL).
+See [COPYING](https://github.com/kmuto/review/blob/master/COPYING) file.
 
-* jumoline.sty (test/sample-book/src/vendor/jumoline): The LaTeX Project Public License. See [LPPL](https://github.com/kmuto/review/blob/master/test/sample-book/src/vendor/jumoline/lppl.txt) file.
+Exception:
+
+* doc/*, samples/*: MIT License. See [LICENSE](https://github.com/kmuto/review/blob/master/doc/LICENSE) file.
+* jumoline.sty, vendor/jumoline: The LaTeX Project Public License. See [LPPL](https://github.com/kmuto/review/blob/master/vendor/jumoline/lppl.txt) file.
+* plistings.sty, vendor/plistings: MIT License. See [LICENSE](https://github.com/kmuto/review/blob/master/vendor/plistings/LICENSE) file.
+* gentombow.sty, vendor/gentombow: BSD License. See [LICENSE](https://github.com/kmuto/review/blob/master/vendor/gentombow/LICENSE) file.
+* jsbook.cls, vendor/jsclasses: BSD License. See [LICENSE](https://github.com/kmuto/review/blob/master/vendor/jsclasses/LICENSE) file.
 
 ## Copyright
 
-Copyright (c) 2006-2018 Minero Aoki, Kenshi Muto, Masayoshi Takahashi, Masanori Kado.
+Copyright (c) 2006-2019 Minero Aoki, Kenshi Muto, Masayoshi Takahashi, Masanori Kado.

@@ -1,4 +1,4 @@
-# Copyright (c) 2010-2017 Minero Aoki, Kenshi Muto
+# Copyright (c) 2010-2019 Minero Aoki, Kenshi Muto
 #               2002-2009 Minero Aoki
 #
 # This program is free software.
@@ -43,32 +43,11 @@ module ReVIEW
   class Preprocessor
     include ErrorUtils
 
-    class Strip
-      def initialize(f)
-        @f = f
-      end
-
-      def path
-        @f.path
-      end
-
-      def lineno
-        @f.lineno
-      end
-
-      def gets
-        @f.each_line do |line|
-          return "\#@\#\n" if /\A\#@/ =~ line
-          return line
-        end
-        nil
-      end
-    end
-
     def initialize(repo, param)
       @repository = repo
       @config = param
       @logger = ReVIEW.logger
+      @leave_content = nil
     end
 
     def process(inf, outf)
@@ -76,8 +55,8 @@ module ReVIEW
       @f = outf
       begin
         preproc inf
-      rescue Errno::ENOENT => err
-        error err.message
+      rescue Errno::ENOENT => e
+        error e.message
       end
     end
 
@@ -106,6 +85,7 @@ module ReVIEW
         when /\A\#@mapfile/
           direc = parse_directive(line, 1, 'eval')
           path = expand(direc.arg)
+          @leave_content = File.extname(path) == '.re'
           if direc['eval']
             ent = evaluate(path, ent)
           else
@@ -116,6 +96,7 @@ module ReVIEW
         when /\A\#@map(?:range)?/
           direc = parse_directive(line, 2, 'unindent')
           path = expand(direc.args[0])
+          @leave_content = File.extname(path) == '.re'
           ent = @repository.fetch_range(path, direc.args[1]) or
             error "unknown range: #{path}: #{direc.args[1]}"
           ent = (direc['unindent'] ? unindent(ent, direc['unindent']) : ent)
@@ -127,6 +108,9 @@ module ReVIEW
         when /\A\#@/
           op = line.slice(/@(\w+)/, 1)
           warn "unknown directive: #{line.strip}" unless known_directive?(op)
+          if op == 'warn'
+            warn line.strip.sub(/\#@warn\((.+)\)/, '\1')
+          end
           @f.print line
 
         when /\A\s*\z/ # empty line
@@ -166,9 +150,11 @@ module ReVIEW
           @f.print line
           return nil
         when %r{\A//\}}
-          warn '//} seen in list'
-          @f.print line
-          return nil
+          unless @leave_content
+            warn '//} seen in list'
+            @f.print line
+            return nil
+          end
         when /\A\#@\w/
           warn "#{line.slice(/\A\#@\w+/)} seen in list"
           @f.print line
@@ -357,6 +343,7 @@ module ReVIEW
     private
 
     def file_descripter(fname)
+      @leave_content = File.extname(fname) == '.re'
       return @repository[fname] if @repository[fname]
 
       @repository[fname] = git?(fname) ? parse_git_blob(fname) : parse_file(fname)
@@ -455,6 +442,10 @@ module ReVIEW
     end
 
     def canonical(line)
+      if @leave_content
+        return line
+      end
+
       tabwidth = @config['tabwidth'] || 8
       if tabwidth > 0
         detab(line, tabwidth).rstrip + "\n"

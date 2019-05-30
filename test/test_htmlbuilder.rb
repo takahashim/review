@@ -13,6 +13,7 @@ class HTMLBuidlerTest < Test::Unit::TestCase
     @config['secnolevel'] = 2
     @config['stylesheet'] = nil
     @config['htmlext'] = 'html'
+    @config['epubmaker'] = {}
     @book = Book::Base.new('.')
     @book.config = @config
     @compiler = ReVIEW::Compiler.new(@builder)
@@ -305,6 +306,11 @@ class HTMLBuidlerTest < Test::Unit::TestCase
   def test_inline_uchar
     actual = compile_inline('test @<uchar>{2460} test2')
     assert_equal 'test &#x2460; test2', actual
+  end
+
+  def test_inline_balloon
+    actual = compile_inline('test @<balloon>{①}')
+    assert_equal %Q(test <span class="balloon">①</span>), actual
   end
 
   def test_inline_ruby
@@ -1065,6 +1071,8 @@ EOS
   end
 
   def test_texequation
+    return true if /mswin|mingw|cygwin/ =~ RUBY_PLATFORM
+    return true unless system('latex -version 1>/dev/null 2>/dev/null')
     mktmpbookdir('catalog.yml' => "CHAPS:\n - ch01.re\n",
                  'ch01.re' => "= test\n\n//texequation{\np \\land \\bm{P} q\n//}\n") do |dir, book, _files|
       @book = book
@@ -1076,7 +1084,7 @@ EOS
       FileUtils.mkdir_p(File.join(dir, 'images'))
       expected = <<-EOB
 <div class=\"equation\">
-<img src=\"././images/_review_math/_gen_XXX.png\" />
+<img src=\"images/_review_math/_gen_XXX.png\" class=\"math_gen_84291054a12d278ea05694c20fbbc8e974ec66fc13be801c01dca764faeecccb\" alt="p \\land \\bm{P} q" />
 </div>
       EOB
       tmpio = $stderr
@@ -1088,6 +1096,32 @@ EOS
       end
       actual = result.gsub(/_gen_[0-9a-f]+\.png/, '_gen_XXX.png')
       assert_equal expected, actual
+    end
+  end
+
+  def test_texequation_fail
+    # Re:VIEW 3 never fail on defer mode. This test is only for Re:VIEW 2.
+    return true if /mswin|mingw|cygwin/ =~ RUBY_PLATFORM
+    return true unless system('latex -version 1>/dev/null 2>/dev/null')
+    mktmpbookdir('catalog.yml' => "CHAPS:\n - ch01.re\n",
+                 'ch01.re' => "= test\n\n//texequation{\np \\land \\bm{P}} q\n//}\n") do |dir, book, _files|
+      @book = book
+      @book.config = @config
+      @config['review_version'] = 2
+      @config['imgmath'] = true
+      @chapter = Book::Chapter.new(@book, 1, '-', nil, StringIO.new)
+      location = Location.new(nil, nil)
+      @builder.bind(@compiler, @chapter, location)
+      FileUtils.mkdir_p(File.join(dir, 'images'))
+      tmpio = $stderr
+      $stderr = StringIO.new
+      begin
+        assert_raise(ReVIEW::ApplicationError) do
+          _result = compile_block("//texequation{\np \\land \\bm{P}} q\n//}\n")
+        end
+      ensure
+        $stderr = tmpio
+      end
     end
   end
 
@@ -1553,7 +1587,7 @@ EOS
     assert_equal expected, actual
   end
 
-  def test_inline_fn
+  def test_footnote
     fn = Book::FootnoteIndex.parse(['//footnote[foo][bar\\a\\$buz]'])
     @chapter.instance_eval { @footnote_index = fn }
     actual = compile_block("//footnote[foo][bar\\a\\$buz]\n")
@@ -1561,9 +1595,25 @@ EOS
 <div class="footnote" epub:type="footnote" id="fn-foo"><p class="footnote">[*1] bar\a\$buz</p></div>
 EOS
     assert_equal expected, actual
+
+    @book.config['epubmaker'] ||= {}
+    @book.config['epubmaker']['back_footnote'] = true
+    actual = compile_block("//footnote[foo][bar\\a\\$buz]\n")
+    expected = <<-'EOS'
+<div class="footnote" epub:type="footnote" id="fn-foo"><p class="footnote"><a href="#fnb-foo">⏎</a>[*1] bar\a\$buz</p></div>
+EOS
+    assert_equal expected, actual
+
+    I18n.set('html_footnote_textmark', '+%s:')
+    I18n.set('html_footnote_backmark', '←')
+    actual = compile_block("//footnote[foo][bar\\a\\$buz]\n")
+    expected = <<-'EOS'
+<div class="footnote" epub:type="footnote" id="fn-foo"><p class="footnote"><a href="#fnb-foo">←</a>+1:bar\a\$buz</p></div>
+EOS
+    assert_equal expected, actual
   end
 
-  def test_inline_fn_with_tricky_id
+  def test_footnote_with_tricky_id
     fn = Book::FootnoteIndex.parse(['//footnote[123 あ_;][bar\\a\\$buz]'])
     @chapter.instance_eval { @footnote_index = fn }
     actual = compile_block("//footnote[123 あ_;][bar\\a\\$buz]\n")
@@ -1571,6 +1621,22 @@ EOS
 <div class="footnote" epub:type="footnote" id="fn-id_123-_E3_81_82___3B"><p class="footnote">[*1] bar\a\$buz</p></div>
 EOS
     assert_equal expected, actual
+  end
+
+  def test_inline_fn
+    book = ReVIEW::Book::Base.load
+    book.catalog = ReVIEW::Catalog.new('CHAPS' => %w[ch1.re])
+    io1 = StringIO.new("//footnote[foo][bar]\n")
+    chap1 = ReVIEW::Book::Chapter.new(book, 1, 'ch1', 'ch1.re', io1)
+    book.parts = [ReVIEW::Book::Part.new(self, nil, [chap1])]
+    builder = ReVIEW::HTMLBuilder.new
+    comp = ReVIEW::Compiler.new(builder)
+    builder.bind(comp, chap1, nil)
+    fn = builder.inline_fn('foo')
+    assert_equal '<a id="fnb-foo" href="#fn-foo" class="noteref" epub:type="noteref">*1</a>', fn
+    I18n.set('html_footnote_refmark', '+%s')
+    fn = builder.inline_fn('foo')
+    assert_equal '<a id="fnb-foo" href="#fn-foo" class="noteref" epub:type="noteref">+1</a>', fn
   end
 
   def test_inline_hd
@@ -1688,8 +1754,10 @@ EOS
 
   def test_comment_for_draft
     @config['draft'] = true
-    actual = compile_block('//comment[コメント]')
-    assert_equal %Q(<div class="draft-comment">コメント</div>\n), actual
+    actual = compile_block('//comment[コメント<]')
+    assert_equal %Q(<div class="draft-comment">コメント&lt;</div>\n), actual
+    actual = compile_block("//comment{\nA<>\nB&\n//}")
+    assert_equal %Q(<div class="draft-comment">A&lt;&gt;<br />B&amp;</div>\n), actual
   end
 
   def test_inline_comment
@@ -1717,9 +1785,11 @@ EOS
 EOB
       end
       @book.config['words_file'] = File.join(dir, 'words.csv')
-
+      io = StringIO.new
+      @builder.instance_eval{ @logger = ReVIEW::Logger.new(io) }
       actual = compile_block('@<w>{F} @<w>{B} @<wb>{B} @<w>{N}')
       assert_equal %Q(<p>foo bar&quot;\\&lt;&gt;_@&lt;b&gt;{BAZ} <b>bar&quot;\\&lt;&gt;_@&lt;b&gt;{BAZ}</b> [missing word: N]</p>\n), actual
+      assert_match(/WARN -- : :1: word not bound: N/, io.string)
     end
   end
 
@@ -1738,6 +1808,44 @@ EOB
       e = assert_raises(ReVIEW::ApplicationError) { compile_block "@<#{name}>{n}\n" }
       assert_equal ':1: error: key not found: "n"', e.message
     end
+  end
+
+  def test_texequation_plain
+    src = <<-EOS
+//texequation{
+e=mc^2
+//}
+EOS
+    expected = <<-EOS
+<div class="equation">
+<pre>e=mc^2
+</pre>
+</div>
+EOS
+    actual = compile_block(src)
+    assert_equal expected, actual
+  end
+
+  def test_texequation_with_caption
+    src = <<-EOS
+@<eq>{emc2}
+
+//texequation[emc2][The Equivalence of Mass @<i>{and} Energy]{
+e=mc^2
+//}
+EOS
+    expected = <<-EOS
+<p><span class="eqref">式1.1</span></p>
+<div id="emc2" class="caption-equation">
+<p class="caption">式1.1: The Equivalence of Mass <i>and</i> Energy</p>
+<div class="equation">
+<pre>e=mc^2
+</pre>
+</div>
+</div>
+EOS
+    actual = compile_block(src)
+    assert_equal expected, actual
   end
 =end
 end

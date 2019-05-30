@@ -1,37 +1,345 @@
-# Version 3.0.0preview1 (unreleased)
+# Version 3.1.0
+## Breaking Changes
+* PDFMaker: introduce `\reviewimagecaption` macro for the caption of figure ([#1254]). Please update your review-base.sty by `review-update` command on your  Re:VIEW 3 project.
+* remove `--strip` option which is undocumented and doesn't work correctly from `review-preproc command` ([#1257])
+
+## Bug Fixes
+* PDFMaker: fix a problem that the section number of the part continues the section number in the previous chapter ([#1225],[#1226])
+* fix copying of gentombow.sty in samples folder ([#1229])
+* PDFMaker: fix that the number of lines specified by `number_of_lines` document option decrease by 1 line than originally on review-jsbook ([#1235])
+* PDFMaker: fix review-jlreq to work with LuaLaTeX ([#1243])
+* EPUBMaker: fix a problem that the hierachy of the table of contents become strange when there is a part ([#1262])
+* fix escaping of `//comment` ([#1264])
+* PDFMaker: fix overflowing when the left column of colophon is long ([#1252])
+* fix an error when CHAPS: is empty ([#1273])
+
+## Enhancements
+* PDFMaker: load amssymb, amsthm, and bm packages which are often used as extension of mathematical expression ([#1224])
+* HTMLBuilder: `emlist` and `listnum` now always pass `highlight` method as well as others ([#1231])
+* EPUBMaker: implement a back-link to the text from the footnote ([#1233])
+* PDFMaker: add `\makelines` macro to create a dummy line ([#1240])
+* implement `#@warn` correctly ([#1258])
+* `#@mapfile` now imports as is (keep tabs etc.) when imported file has `.re` extension ([#1247])
+* add Ruby 2.6 for the test coverage ([#1242])
+* PDFMaker: replace `zw` with `\zw` in review-jlreq. add a indent to paragraphs in the column ([#1250])
+* PDFMaker: when `\reviewimagecaption` is undefined (implemented in [#1254]), define it ([#1267])
+
+## Docs
+* README.md: fix the filename of jsbook.cls ([#1239])
+* add the note about `back_footnote` into config.yml.sample and update documents a little ([#1268])
+
+## Contributors
+* [@doublemarket](https://github.com/doublemarket)
+* [@munepi](https://github.com/munepi)
+
+[#1224]: https://github.com/kmuto/review/issues/1224
+[#1225]: https://github.com/kmuto/review/pull/1225
+[#1226]: https://github.com/kmuto/review/pull/1226
+[#1229]: https://github.com/kmuto/review/pull/1229
+[#1231]: https://github.com/kmuto/review/issues/1231
+[#1233]: https://github.com/kmuto/review/issues/1233
+[#1235]: https://github.com/kmuto/review/issues/1235
+[#1239]: https://github.com/kmuto/review/pull/1239
+[#1240]: https://github.com/kmuto/review/pull/1240
+[#1242]: https://github.com/kmuto/review/pull/1242
+[#1243]: https://github.com/kmuto/review/issues/1243
+[#1247]: https://github.com/kmuto/review/issues/1247
+[#1250]: https://github.com/kmuto/review/pull/1250
+[#1252]: https://github.com/kmuto/review/issues/1252
+[#1254]: https://github.com/kmuto/review/issues/1254
+[#1257]: https://github.com/kmuto/review/issues/1257
+[#1258]: https://github.com/kmuto/review/issues/1258
+[#1262]: https://github.com/kmuto/review/issues/1262
+[#1264]: https://github.com/kmuto/review/issues/1264
+[#1267]: https://github.com/kmuto/review/issues/1267
+[#1268]: https://github.com/kmuto/review/issues/1268
+[#1273]: https://github.com/kmuto/review/issues/1273
+
+# Version 3.0.0
+
+## Bug Fixes
+* PDFMaker: adjust the loading of external files in review-jsbook.cls ([#1217])
+
+## Contributors
+* [@munepi](https://github.com/munepi)
+
+[#1217]: https://github.com/kmuto/review/pull/1217
+
+# Version 3.0.0 release candidate
+## Breaking Changes
+* PDFMaker: heading character size of review-jsbook becomes the same as the original jsbook ([#1152])
+* PDFMaker: Q, W, L, H parameters of review-jsbook are withdrawn. Projects created in the past preview version can be updated with the review-update command ([#1151],[#1201])
+
+## Bug Fixes
+* PDFMaker: fixes an issue that hiddenfolio parameter was ignored when using both hiddenfolio and tombopaper in review-jsbook ([#1158])
+* PDFMaker: fixes a problem that the paperwidth and paperheight parameters of review-jsbook didn't work ([#1171])
+* fixes an issue that review-update ignored update of sty folder ([#1183])
+* PDFMaker: fix serial_pagination and startpage were not working in review-jlreq class ([#1204])
+
+## Enhancements
+* PDFMaker: in review-jsbook, you can specify the font size with `fontsize` parameter and the line height with `baselineskip` parameter with units such as pt and mm ([#1151])
+* PDFMaker: users who want to continue using the original jsbook.cls class file for some reason can use sty files of review-jsbook set ([#1177])
+* PDFMaker: add useful macros to review-jsbook and review-jlreq for users. `\oneblankpage` creates an empty page. `\clearoddpage` breaks page as necessary so that the next page is always an even page ([#1175],[#1182])
+* PDFMaker: add `media` parameter that specifies the type of PDF to review-jsbook and review-jlreq. This has the same meaning as `cameraready` ([#1181])
+* PDFMaker: sections are now allowed in part ([#1195])
+* PDFMaker: `\reviewusepart` macro is defined when theare is a part ([#1199])
+* `texdocumentclass` parameter is explicit (not a comment) when creating config.yml by review-init ([#1202])
+* PDFMaker: line feed (`@<br>`) in the table is now represented by `\newline` macro when the width is explicity specified with `//tsize` ([#1206])
+* PDFMaker: enable to use `L{width}` (left justified), `C{width}` (centering), `R{width}` (right justified) as representation of the table column width ([#1208])
+* PDFMaker: to avoid implementation differences between versions, the snapshots jsbook.cls (2018/06/23) and gentombow.sty (2018/08/30 v0.9j) are copied to the `sty` folder ([#1210])
+
+## Docs
+* update `format_idg.ja.md` ([#1188])
+* add note about review-update command to quickstart guide `quickstart.ja.md` ([#1189])
+* update comments of `config.yml.sample` ([#1190])
+* update `pdfmaker.ja.md` ([#1191])
+* update `writing_vertical.ja.md`  ([#1198])
+* update document of review-jsbook ([#1203])
+* update document of review-jlreq ([#1204])
+
+## Contributors
+* [@munepi](https://github.com/munepi)
+
+[#1151]: https://github.com/kmuto/review/issues/1151
+[#1152]: https://github.com/kmuto/review/issues/1152
+[#1158]: https://github.com/kmuto/review/issues/1158
+[#1171]: https://github.com/kmuto/review/issues/1171
+[#1175]: https://github.com/kmuto/review/pull/1175
+[#1177]: https://github.com/kmuto/review/pull/1177
+[#1181]: https://github.com/kmuto/review/issues/1181
+[#1182]: https://github.com/kmuto/review/pull/1182
+[#1183]: https://github.com/kmuto/review/issues/1183
+[#1188]: https://github.com/kmuto/review/pull/1188
+[#1189]: https://github.com/kmuto/review/pull/1189
+[#1190]: https://github.com/kmuto/review/pull/1190
+[#1191]: https://github.com/kmuto/review/pull/1191
+[#1195]: https://github.com/kmuto/review/issues/1195
+[#1198]: https://github.com/kmuto/review/pull/1198
+[#1199]: https://github.com/kmuto/review/pull/1199
+[#1201]: https://github.com/kmuto/review/pull/1201
+[#1202]: https://github.com/kmuto/review/pull/1202
+[#1203]: https://github.com/kmuto/review/pull/1203
+[#1204]: https://github.com/kmuto/review/pull/1204
+[#1206]: https://github.com/kmuto/review/issues/1206
+[#1208]: https://github.com/kmuto/review/pull/1208
+[#1210]: https://github.com/kmuto/review/issues/1210
+
+# Version 3.0.0 preview 4
+## New Features
+* new command `review-update` is added, which updates the setting of the project files to the new version ([#1144])
+* `texequation` representing an expression can now be numbered and captioned.  To reference this you can use the `@<eq>` operator ([#1167])
+
+## Breaking Changes
+* In IDGXMLBuilder, PlaintextBuilder, and TextBuilder, the expansion result of `@<chapref>` is no longer created in a unique way. Like other builders, it uses the `chapter_quote` locale string ([#1160])
+
+## Bug Fixes
+* samples collection could not generate PDF in preview 3. Now it works with `rake pdf` ([#1156])
+
+## Enhancements
+* PDFMaker: support hiddenfolio parameter with review-jlreq.cls ([#1147])
+* EPUBMaker/WEBMaker: when imgmath function is enabled, font size is passed to each `//texequation` ([#1146])
+
+[#1144]: https://github.com/kmuto/review/issues/1144
+[#1146]: https://github.com/kmuto/review/issues/1146
+[#1147]: https://github.com/kmuto/review/issues/1147
+[#1156]: https://github.com/kmuto/review/issues/1156
+[#1160]: https://github.com/kmuto/review/issues/1160
+[#1167]: https://github.com/kmuto/review/issues/1167
+
+# Version 3.0.0 preview 3
+## New Features
+* PDFMaker: instead of using jsbook.cls as it is, review-jsbook.cls (based on jsbook.cls, default) and review-jlreq.cls (based on jlreq.cls) are introduced. These supports the creation both paper and electronic PDF books. ([#1032],[#1117])
+* EPUBMaker/WEBMaker: add imgmath function to image mathematical expressions ([#868],[#1138])
+
+## Breaking Changes
+* PDFMaker: the location of `\frontmatter` is moved from the back of the titlepage to the front ([#1128])
+* PDFMaker: the cover image specified by `coverimage` is placed in the actual size and in the center ([#1064],[#1117])
+
+## Bug Fixes
+* PDFMaker: fix an errror handling of `cover` parameter ([#1116])
+* PDFMaker: fix position misalignment in preview 2 ([#1090],[#1117])
+
+## Enhancements
+* PDFMaker: increase the number of `config.yml` configuration parameters to LaTeX macros ([#1121])
+* PDFMaker: add hook `\reviewbegindocumenthook` just after `\begin{document}`, and add hook `\reviewenddocumenthook` just before `\end{document}` ([#1111])
+* PDFMaker: geometry.sty is no longer used, because the new class file can specify the paper design by document option ([#912])
+* PDFMaker: serial-pagination feature is supported in new class files ([#1129])
+* add network download function to `review-init` command. Specifying the URL of the zip file with `-p` option expands the zip file to the project folder ([#812])
+* PDFMaker: For expressing digital trim-marks and hidden page numbers (kakushi-nombre), the gentombow package (the external TeX package) has been included in vendor folder. It will be copied to the sty folder of the project folder ([#1136])
+
+## Docs
+* add a method of making Kindle e-book file to doc/customize_epub.ja.md ([#1114])
+* update examples of PDFMaker's default document options ([#1115])
+* clarify license of each file ([#1093],[#1112])
+* add note about `imgmath` feature to doc/format.ja.md ([#868])
+
+## Contributors
+* [@munepi](https://github.com/munepi)
+
+[#812]: https://github.com/kmuto/review/issues/812
+[#868]: https://github.com/kmuto/review/issues/868
+[#912]: https://github.com/kmuto/review/issues/912
+[#1032]: https://github.com/kmuto/review/issues/1032
+[#1064]: https://github.com/kmuto/review/issues/1064
+[#1090]: https://github.com/kmuto/review/issues/1090
+[#1093]: https://github.com/kmuto/review/issues/1093
+[#1111]: https://github.com/kmuto/review/pull/1111
+[#1112]: https://github.com/kmuto/review/pull/1112
+[#1114]: https://github.com/kmuto/review/pull/1114
+[#1115]: https://github.com/kmuto/review/issues/1115
+[#1116]: https://github.com/kmuto/review/pull/1116
+[#1117]: https://github.com/kmuto/review/pull/1117
+[#1121]: https://github.com/kmuto/review/pull/1121
+[#1128]: https://github.com/kmuto/review/issues/1128
+[#1129]: https://github.com/kmuto/review/pull/1129
+[#1136]: https://github.com/kmuto/review/issues/1136
+[#1138]: https://github.com/kmuto/review/issues/1138
+
+# Version 3.0.0 preview 2
+
+## New Features
+* add `review-epub2html` to produce single HTML file from EPUB file for CSS typesetting ([#1098])
+
+## Breaking Changes
+* PDFMaker: allow a path with space character on `texcommand`, `dvicommmand`, and `makeindex_command`. Due to this change, these parameters no longer take command options. use `texoptions`, `dvioptions`, and `makeindex_options` to specify  options ([#1091])
+* PDFMaker: the file used internally has been changed from `book.tex` to `__REVIEW_BOOK__.tex` ([#1081])
+* PDFMaker: dropped geometry.sty from jsbook style ([#912])
+* PDFMaker: use twocolumn option for jsbook style ([#1032])
+* unified strings expanded by `@<chapref>`, `@<hd>`, and `@<column>` op between builders. you can customize it with `locale.yml`. `@<chapref>` will be expanded like `Chapter 1 "FOO"` (locale msgid: `chapter_quote` and `chapter_quote_without_number`). `chapter_quote` now takes two `%s`. `@<hd>` will be expanded like `"2.1 BAR"` (locale msgid: `hd_quote` and `hd_quote_without_number`). `@<column>` will be extended like `Column BAZ` (locale msgid: `column`) ([#886])
+
+## Bug Fixes
+* EPUBMaker: `modified` value of OPF file is now correct UTC time ([#1094])
+* fix an issue where bibliography file in `contentdir` could not be read ([#1103])
+* PDFMaker: fix an issue where the file specified by the parameter could not be found ([#1086])
+* fix a bug in the fence escaping that occurred in preview1 ([#1083])
+* remove unwanted tab character from sample CSS ([#1084])
+
+## Enhancements
+* PDFMaker: use `\floatplacement` to configure float settings of table and figure ([#1095])
+* EPUBMaker: use logger function to export error/warning ([#1077])
+* PDFMaker: do not use dvipdfmx when `dvicommand` parameter is null ([#1065])
+
+## Docs
+* Move sample documents to /samples folder ([#1073])
+* Add descriptions abount hooks and parameters of indexing into `config.yml.sample` ([#1097])
+* Fix typo in quickstart.md ([#1079])
+
+## Contributors
+* [@aiya000](https://github.com/aiya000)
+* [@sho-h](https://github.com/sho-h)
+* [@kateinoigakukun](https://github.com/kateinoigakukun)
+
+[#886]: https://github.com/kmuto/review/issues/886
+[#912]: https://github.com/kmuto/review/issues/912
+[#1032]: https://github.com/kmuto/review/issues/1032
+[#1065]: https://github.com/kmuto/review/pull/1065
+[#1073]: https://github.com/kmuto/review/issues/1073
+[#1077]: https://github.com/kmuto/review/pull/1077
+[#1079]: https://github.com/kmuto/review/pull/1079
+[#1081]: https://github.com/kmuto/review/pull/1081
+[#1080]: https://github.com/kmuto/review/issues/1080
+[#1083]: https://github.com/kmuto/review/issues/1083
+[#1084]: https://github.com/kmuto/review/pull/1084
+[#1086]: https://github.com/kmuto/review/issues/1086
+[#1091]: https://github.com/kmuto/review/pull/1091
+[#1094]: https://github.com/kmuto/review/pull/1094
+[#1095]: https://github.com/kmuto/review/pull/1095
+[#1097]: https://github.com/kmuto/review/pull/1097
+[#1098]: https://github.com/kmuto/review/pull/1098
+[#1103]: https://github.com/kmuto/review/pull/1103
+
+# Version 3.0.0 preview 1
 
 ## New Features
 * .re files can be placed in subfolders by specifying a folder with `contentdir` parameter ([#920])
 * `//graph` supports PlantUML ([#1006])
-* add `@<w>` and `@<wb>` to expand the value corresponding to the specified key from CSV word file ([#1007])
+* add `@<w>` and `@<wb>` to expand the value corresponding to the specified key from CSV word file ([#1007], [#1010])
+* LATEXBuilder: raise error when `*.re` file in catalog.yml does not exist ([#957])
+* LATEXBuilder: add pxrubrica package to support 'ruby' ([#655])
+* LATEXBuilder: support multiple layout files for LaTeX style ([#812])
+* support inline `@<balloon>` as default settings ([#829])
+* LATEXBuilder: allow to use Unicode character without otf package if possible  ([#1045])
+* override `CONFIG_FILE` in Rakefile with rake options ([#1059])
 
 ## Breaking Changes
 * When the value of review_version is 3 or more, `@<m>` no longer add a space before and after formula ([#943])
 * the function of automatic detection of highlight target language by identifier in `//list`, `//listnum` is removed from HTMLBuilder ([#1016])
+* LATEXBuilder: restructured `layout.tex.erb` ([#950])
+* LATEXBuilder: add a new envirionment `reviewlistblock` in LaTeX ([#916])
+* LATEXBuilder: attach `plistings` package and suport it instead of jlisting  for `listings` ([#635])
+* LATEXBuilder: remove underline in anchor for printing use ([#808])
+* LATEXBuilder: use more abstract name like `\reviewbold` instead of `\textbf` ([#792])
+* LATEXBuilder: `cover` and `titlepage` in config.yml is independently of each other ([#848])
+* review-preproc: remove deprecated option --final  ([#993])
+* LATEXBuilder: captionblocks use new environments like `reviewnote`, not `reviewminicolumn` ([#1046])
 
 ## Bug Fixes
 * Fix redundant log display with Ruby 2.3 or later ([#975])
 * for backward compatibility, revert `usepackage` parameter which was removed Version 2.5.0 ([#1001])
+* HTMLBuilder: hide latex log of `@<m>{...}` amd `//texequation{...//}` ([#1027])
+* LATEXBuilder: fix empty caption for listings ([#1040])
+* fix load path of MeCab ([#1063])
 
 ## Enhancements
 * `//graph` now works on Windows ([#1008])
 * file extensions of image files and font files becomes case insensitive ([#1002])
+* review-pdfmaker: show executed command and its options ([#962],[#968])
+* PDFMaker: support `*.psd` files as images ([#879])
+* PDFMaker: `texoptions` in config.yml is "-interaction=nonstopmode -file-line-error" as default ([#1029])
+* hide (latex and other commands') log messages ([#1036])
+* MARKDOWNBuilder: support some commands ([#881])
+* image_finder.rb: support symlinked directory ([#743])
+* add files like `catalog.yml` as denendency relation ([#1060])
 
 ## Docs
 * add description of external tools used in `//graph` ([#1008])
 * add description of `@<w>` and `@<wb>` ([#1007])
+* add description of dvipdfmx option for zlib compression level (-z 9) in config.yml ([#935])
 
 ## Contributors
+* [@TeTiRoss](https://github.com/TeTiRoss)
+* [@kauplan](https://github.com/kauplan)
+* [@munepi](https://github.com/munepi)
+* [@m-shibata](https://github.com/m-shibata)
 
+[#635]: https://github.com/kmuto/review/issues/635
+[#655]: https://github.com/kmuto/review/issues/655
+[#743]: https://github.com/kmuto/review/issues/743
+[#792]: https://github.com/kmuto/review/issues/792
+[#808]: https://github.com/kmuto/review/issues/808
+[#812]: https://github.com/kmuto/review/issues/812
+[#829]: https://github.com/kmuto/review/issues/829
+[#848]: https://github.com/kmuto/review/issues/848
+[#879]: https://github.com/kmuto/review/issues/879
+[#881]: https://github.com/kmuto/review/issues/881
+[#916]: https://github.com/kmuto/review/issues/916
 [#920]: https://github.com/kmuto/review/issues/920
+[#938]: https://github.com/kmuto/review/issues/938
+[#935]: https://github.com/kmuto/review/issues/935
 [#943]: https://github.com/kmuto/review/issues/943
+[#950]: https://github.com/kmuto/review/issues/950
+[#957]: https://github.com/kmuto/review/issues/957
+[#962]: https://github.com/kmuto/review/issues/962
+[#968]: https://github.com/kmuto/review/issues/968
 [#975]: https://github.com/kmuto/review/issues/975
+[#993]: https://github.com/kmuto/review/issues/993
 [#1001]: https://github.com/kmuto/review/pull/1001
 [#1002]: https://github.com/kmuto/review/issues/1002
 [#1006]: https://github.com/kmuto/review/issues/1006
 [#1007]: https://github.com/kmuto/review/issues/1007
 [#1008]: https://github.com/kmuto/review/pull/1008
+[#1010]: https://github.com/kmuto/review/pull/1010
 [#1016]: https://github.com/kmuto/review/issues/1016
+[#1022]: https://github.com/kmuto/review/issues/1022
+[#1027]: https://github.com/kmuto/review/issues/1027
+[#1029]: https://github.com/kmuto/review/issues/1029
+[#1036]: https://github.com/kmuto/review/issues/1036
+[#1040]: https://github.com/kmuto/review/issues/1040
+[#1045]: https://github.com/kmuto/review/issues/1045
+[#1046]: https://github.com/kmuto/review/issues/1046
+[#1059]: https://github.com/kmuto/review/issues/1059
+[#1060]: https://github.com/kmuto/review/issues/1060
+[#1063]: https://github.com/kmuto/review/issues/1063
 
 # Version 2.5.0
 
@@ -251,6 +559,7 @@
 [#785]: https://github.com/kmuto/review/issues/785
 [#787]: https://github.com/kmuto/review/issues/787
 [#788]: https://github.com/kmuto/review/issues/788
+[#794]: https://github.com/kmuto/review/issues/794
 [#795]: https://github.com/kmuto/review/issues/795
 
 
@@ -485,7 +794,7 @@
     * locale.yaml -> locale.yml
     * PageMetric.a5 -> PageMetric::A5
     * raise error when using locale.yaml and layout.erb
-    * `prt` is printer(`印刷所`), not publisher(`発行所`).  `発行所` is `pbl`.  ([#562, #593])
+    * `prt` is printer(`印刷所`), not publisher(`発行所`).  `発行所` is `pbl`.  ([#562], [#593])
 * Obsolete `appendix_format` ([#609])
 * Remove obsolete inaobuilder. (upstream changed their mind to use modified Markdown) ([#573])
 * Remove obsolete legacy epubmaker
@@ -628,11 +937,15 @@
 * Fix latexbuilder to show caption in `//list` without highliting ([#465])
 * Fix markdownbuilder to use definition list ([#473])
 
+[#465]: https://github.com/kmuto/review/issues/465
+[#473]: https://github.com/kmuto/review/issues/473
+
 # Version 1.7.1
 
 ## Bug Fix
 * Fix latexbuilder to display caption twice in `//listnum` ([#465])
 * Fix review-init to generate non-valid EPUB3 file with epubcheck 4.0.1 ([#456])
+[#456]: https://github.com/kmuto/review/issues/473
 
 # Version 1.7.0
 

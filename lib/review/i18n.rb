@@ -59,6 +59,10 @@ module ReVIEW
       @i18n.get(word, locale)
     end
 
+    def self.set(word, str)
+      @i18n.set(word, str)
+    end
+
     attr_accessor :locale
 
     def initialize(locale = nil)
@@ -90,6 +94,12 @@ module ReVIEW
           @store[key].merge!(values)
         end
       end
+
+      # check obsolete locale parameter
+      s = t('chapter_quote', ['__!@!NUMBER!@!__', '__!@!TITLE!@!__'])
+      if s !~ /__!@!NUMBER!@!__/ || s !~ /__!@!TITLE!@!__/
+        ReVIEW.logger.warn %Q('chapter_quote' should take 2 '%s' (number and title).)
+      end
     end
 
     def update(user_i18n, locale = nil)
@@ -104,6 +114,10 @@ module ReVIEW
     def get(word, locale = nil)
       locale ||= @locale
       @store[locale][word]
+    end
+
+    def set(word, str)
+      @store[@locale][word] = str
     end
 
     def t(str, args = nil)

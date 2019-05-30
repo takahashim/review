@@ -1,4 +1,4 @@
-\documentclass[dvipdfmx,<%= @documentclassoption %>]{<%= @documentclass %>}
+\documentclass[<%= @documentclassoption %>]{<%= @documentclass %>}
 <%= latex_config %>
 <%- if @config['texstyle'] -%>
 <%-   [@config['texstyle']].flatten.each do |x| -%>
@@ -6,21 +6,29 @@
 <%-   end -%>
 <%- end -%>
 
+%% backward compatibility (defined in config.erb)
+\reviewbackcompatibilityhook
+
 \begin{document}
+
+%% begindocument hook
+\ifdefined\reviewbegindocumenthook
+\reviewbegindocumenthook
+\fi
 
 %% coverpage
 \ifdefined\reviewcoverpagecont
 \reviewcoverpagecont
 \fi
 
-%% title page
-\ifdefined\reviewtitlepagecont
-\reviewtitlepagecont
-\fi
-
 %% frontmatter hook
 \ifdefined\reviewfrontmatterhook
 \reviewfrontmatterhook
+\fi
+
+%% title page
+\ifdefined\reviewtitlepagecont
+\reviewtitlepagecont
 \fi
 
 %% originaltitle
@@ -96,6 +104,11 @@
 %%% backcover page
 \ifdefined\reviewbackcovercont
 \reviewbackcovercont
+\fi
+
+%% enddocument hook
+\ifdefined\reviewenddocumenthook
+\reviewenddocumenthook
 \fi
 
 \end{document}

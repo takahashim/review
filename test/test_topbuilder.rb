@@ -135,6 +135,11 @@ class TOPBuidlerTest < Test::Unit::TestCase
     assert_equal 'test ◆→コメント←◆ test2', actual
   end
 
+  def test_inline_fence
+    actual = compile_inline('@<m>|a|, @<m>{\\frac{1\\}{2\\}}, @<m>$\\frac{1}{2}$, @<m>{\\{ \\\\\\}}, @<m>|\\{ \\}|, test @<code>|@<code>{$サンプル$}|')
+    assert_equal '◆→TeX式ここから←◆a◆→TeX式ここまで←◆, ◆→TeX式ここから←◆\\frac{1}{2}◆→TeX式ここまで←◆, ◆→TeX式ここから←◆\\frac{1}{2}◆→TeX式ここまで←◆, ◆→TeX式ここから←◆\\{ \\}◆→TeX式ここまで←◆, ◆→TeX式ここから←◆\\{ \\}◆→TeX式ここまで←◆, test △@<code>{$サンプル$}☆', actual
+  end
+
   def test_inline_in_table
     actual = compile_block("//table{\n★1☆\t▲2☆\n------------\n★3☆\t▲4☆<>&\n//}\n")
     assert_equal %Q(◆→開始:表←◆\n★★1☆☆\t★▲2☆☆\n★3☆\t▲4☆<>&\n◆→終了:表←◆\n\n), actual
@@ -177,8 +182,10 @@ class TOPBuidlerTest < Test::Unit::TestCase
 
   def test_comment_for_draft
     @config['draft'] = true
-    actual = compile_block('//comment[コメント]')
-    assert_equal %Q(◆→コメント←◆\n), actual
+    actual = compile_block('//comment[コメント<]')
+    assert_equal %Q(◆→コメント<←◆\n), actual
+    actual = compile_block("//comment{\nA<>\nB&\n//}")
+    assert_equal %Q(◆→A<>\nB&←◆\n), actual
   end
 
   def test_list
@@ -301,8 +308,11 @@ EOB
       end
       @book.config['words_file'] = File.join(dir, 'words.csv')
 
+      io = StringIO.new
+      @builder.instance_eval{ @logger = ReVIEW::Logger.new(io) }
       actual = compile_block('@<w>{F} @<w>{B} @<wb>{B} @<w>{N}')
       assert_equal %Q(foo bar"\\<>_@<b>{BAZ} ★bar"\\<>_@<b>{BAZ}☆ [missing word: N]\n), actual
+      assert_match(/WARN -- : :1: word not bound: N/, io.string)
     end
   end
 
@@ -398,9 +408,30 @@ inside column
 ◆→終了:コラム←◆
 
 ■H3■next level
-this is test.
+this is コラム「test」.
 EOS
 
     assert_equal expected, column_helper(review)
+  end
+
+  def test_texequation_with_caption
+    src = <<-EOS
+@<eq>{emc2}
+
+//texequation[emc2][The Equivalence of Mass @<i>{and} Energy]{
+e=mc^2
+//}
+EOS
+    expected = <<-EOS
+式1.1
+
+◆→開始:TeX式←◆
+式1.1　The Equivalence of Mass ▲and☆ Energy
+e=mc^2
+◆→終了:TeX式←◆
+
+EOS
+    actual = compile_block(src)
+    assert_equal expected, actual
   end
 end

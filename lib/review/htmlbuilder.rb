@@ -1,4 +1,4 @@
-# Copyright (c) 2008-2018 Minero Aoki, Kenshi Muto, Masayoshi Takahashi,
+# Copyright (c) 2008-2019 Minero Aoki, Kenshi Muto, Masayoshi Takahashi,
 #                         KADO Masanori
 #               2002-2007 Minero Aoki
 #
@@ -14,6 +14,7 @@ require 'review/textutils'
 require 'review/webtocprinter'
 require 'digest'
 require 'tmpdir'
+require 'open3'
 
 module ReVIEW
   class HTMLBuilder < Builder
@@ -477,21 +478,22 @@ module ReVIEW
 
     def listnum_body(lines, lang)
 pp [:listnum, lines]
-      buf = ""
+      buf = ''
+      body = lines.inject('') { |i, j| i + detab(j) + "\n" }
+      lexer = lang
+      first_line_number = line_num
+      hs = highlight(body: body, lexer: lexer, format: 'html', linenum: true,
+                     options: { linenostart: first_line_number }) + "\n"
+
       if highlight?
-        body = lines.inject('') { |i, j| i + detab(j) + "\n" }
-        lexer = lang
-        first_line_number = line_num
-        buf << highlight(body: body, lexer: lexer, format: 'html', linenum: true,
-                         options: { linenostart: first_line_number }) + "\n"
+        buf << hs
       else
         class_names = ['list']
         class_names.push("language-#{lang}") unless lang.blank?
-        class_names.push('highlight') if highlight?
         buf << %Q(<pre class="#{class_names.join(' ')}">)
-        first_line_num = line_num
-        lines.each_with_index do |line, i|
-          buf << detab((i + first_line_num).to_s.rjust(2) + ': ' + line) + "\n"
+        # class_names.push('highlight') if highlight?
+        hs.split("\n").each_with_index do |line, i|
+          buf << detab((i + first_line_number).to_s.rjust(2) + ': ' + line + "\n")
         end
         buf << '</pre>' + "\n"
       end
@@ -526,20 +528,20 @@ pp [:listnum, lines]
         buf << %Q(<p class="caption">#{compile_inline(caption)}</p>) + "\n"
       end
 
+      body = lines.inject('') { |i, j| i + detab(j) + "\n" }
+      lexer = lang
+      first_line_number = line_num
+      hs = highlight(body: body, lexer: lexer, format: 'html', linenum: true,
+                     options: { linenostart: first_line_number })
       if highlight?
-        body = lines.inject('') { |i, j| i + detab(j) + "\n" }
-        lexer = lang
-        first_line_number = line_num
-        buf << highlight(body: body, lexer: lexer, format: 'html', linenum: true,
-                         options: { linenostart: first_line_number }) + "\n"
+        buf << hs
       else
         class_names = ['emlist']
         class_names.push("language-#{lang}") unless lang.blank?
         class_names.push('highlight') if highlight?
         buf << %Q(<pre class="#{class_names.join(' ')}">)
-        first_line_num = line_num
-        lines.each_with_index do |line, i|
-          buf << detab((i + first_line_num).to_s.rjust(2) + ': ' + line) + "\n"
+        hs.split("\n").each_with_index do |line, i|
+          buf << detab((i + first_line_number).to_s.rjust(2) + ': ' + line) + "\n"
         end
         buf << '</pre>' + "\n"
       end
@@ -601,25 +603,60 @@ pp [:listnum, lines]
       buf
     end
 
-    def texequation(lines)
+    def texequation(lines, id = nil, caption = '')
       buf = ""
       buf << %Q(<div class="equation">) + "\n"
+      if id
+        buf << texequation_header id, caption
+      end
+
+      buf << texequation_body(lines)
+
+      if id
+        buf << '</div>'
+      end
+
+      buf
+    end
+
+    def texequation_header(id, caption)
+      buf = ''
+      buf << %Q(<div id="#{normalize_id(id)}" class="caption-equation">\n)
+      if get_chap
+        buf << %Q(<p class="caption">#{I18n.t('equation')}#{I18n.t('format_number_header', [get_chap, @chapter.equation(id).number])}#{I18n.t('caption_prefix')}#{compile_inline(caption)}</p>\n)
+      else
+        buf << %Q(<p class="caption">#{I18n.t('equation')}#{I18n.t('format_number_header_without_chapter', [@chapter.equation(id).number])}#{I18n.t('caption_prefix')}#{compile_inline(caption)}</p>\n)
+      end
+
+      buf
+    end
+
+    def texequation_body(lines)
+      buf = ''
+      buf << %Q(<div class="equation">)
       if @book.config['mathml']
         require 'math_ml'
         require 'math_ml/symbol/character_reference'
         p = MathML::LaTeX::Parser.new(symbol: MathML::Symbol::CharacterReference)
         buf << p.parse(unescape(lines.join("\n")), true) + "\n"
       elsif @book.config['imgmath']
-        math_str = "\\begin{equation*}\n" + unescape(lines.join("\n")) + "\n\\end{equation*}\n"
+        fontsize = @book.config['imgmath_options']['fontsize'].to_f
+        lineheight = @book.config['imgmath_options']['lineheight'].to_f
+        math_str = "\\begin{equation*}\n\\fontsize{#{fontsize}}{#{lineheight}}\\selectfont\n#{unescape(lines.join("\n"))}\n\\end{equation*}\n"
         key = Digest::SHA256.hexdigest(math_str)
-        math_dir = "./#{@book.config['imagedir']}/_review_math"
+        math_dir = File.join(@book.config['imagedir'], '_review_math')
         Dir.mkdir(math_dir) unless Dir.exist?(math_dir)
-        img_path = "./#{math_dir}/_gen_#{key}.png"
-        make_math_image(math_str, img_path)
-        buf << %Q(<img src="#{img_path}" />) + "\n"
+        img_path = File.join(math_dir, "_gen_#{key}.#{@book.config['imgmath_options']['format']}")
+        if @book.config.check_version('2', exception: false)
+          make_math_image(math_str, img_path)
+          buf << %Q(<img src="#{img_path}" />\n)
+        else
+          defer_math_image(math_str, img_path, key)
+          buf << %Q(<img src="#{img_path}" class="math_gen_#{key}" alt="#{escape(lines.join(' '))}" />\n)
+        end
       else
         buf << '<pre>'
-        buf << lines.join("\n") + "\n"
+        buf << escape(lines.join("\n")) + "\n"
         buf << '</pre>' + "\n"
       end
       buf << '</div>' + "\n"
@@ -796,9 +833,9 @@ pp [:tbl_rows, lines, rows]
     end
 
     def comment(lines, comment = nil)
-      lines ||= []
-      lines.unshift comment unless comment.blank?
       return unless @book.config['draft']
+      lines ||= []
+      lines.unshift escape(comment) unless comment.blank?
       str = lines.join('<br />')
       %Q(<div class="draft-comment">#{escape(str)}</div>) + "\n"
     end
@@ -806,7 +843,12 @@ pp [:tbl_rows, lines, rows]
     def footnote(id, str)
       buf = ""
       if @book.config['epubversion'].to_i == 3
-        buf << %Q(<div class="footnote" epub:type="footnote" id="fn-#{normalize_id(id)}"><p class="footnote">[*#{@chapter.footnote(id).number}] #{compile_inline(str)}</p></div>) + "\n"
+        back = ''
+        if @book.config['epubmaker'] && @book.config['epubmaker']['back_footnote']
+          back = %Q(<a href="#fnb-#{normalize_id(id)}">#{I18n.t('html_footnote_backmark')}</a>)
+        end
+        # XXX: back link must be located at first of p for Kindle.
+        buf << %Q(<div class="footnote" epub:type="footnote" id="fn-#{normalize_id(id)}"><p class="footnote">#{back}#{I18n.t('html_footnote_textmark', @chapter.footnote(id).number)}#{compile_inline(str)}</p></div>)
       else
         buf << %Q(<div class="footnote" id="fn-#{normalize_id(id)}"><p class="footnote">[<a href="#fnb-#{normalize_id(id)}">*#{@chapter.footnote(id).number}</a>] #{compile_inline(str)}</p></div>) + "\n"
       end
@@ -918,7 +960,7 @@ pp [:tbl_rows, lines, rows]
 
     def inline_fn(id)
       if @book.config['epubversion'].to_i == 3
-        %Q(<a id="fnb-#{normalize_id(id)}" href="#fn-#{normalize_id(id)}" class="noteref" epub:type="noteref">*#{@chapter.footnote(id).number}</a>)
+        %Q(<a id="fnb-#{normalize_id(id)}" href="#fn-#{normalize_id(id)}" class="noteref" epub:type="noteref">#{I18n.t('html_footnote_refmark', @chapter.footnote(id).number)}</a>)
       else
         %Q(<a id="fnb-#{normalize_id(id)}" href="#fn-#{normalize_id(id)}" class="noteref">*#{@chapter.footnote(id).number}</a>)
       end
@@ -1008,11 +1050,16 @@ pp [:tbl_rows, lines, rows]
       elsif @book.config['imgmath']
         math_str = '$' + str + '$'
         key = Digest::SHA256.hexdigest(str)
-        math_dir = "./#{@book.config['imagedir']}/_review_math"
+        math_dir = File.join(@book.config['imagedir'], '_review_math')
         Dir.mkdir(math_dir) unless Dir.exist?(math_dir)
-        img_path = "./#{math_dir}/_gen_#{key}.png"
-        make_math_image(math_str, img_path)
-        %Q(<span class="equation"><img src="#{img_path}" /></span>)
+        img_path = File.join(math_dir, "_gen_#{key}.#{@book.config['imgmath_options']['format']}")
+        if @book.config.check_version('2', exception: false)
+          make_math_image(math_str, img_path)
+          %Q(<span class="equation"><img src="#{img_path}" /></span>)
+        else
+          defer_math_image(math_str, img_path, key)
+          %Q(<span class="equation"><img src="#{img_path}" class="math_gen_#{key}" alt="#{escape(str)}" /></span>)
+        end
       else
         %Q(<span class="equation">#{escape(str)}</span>)
       end
@@ -1052,10 +1099,10 @@ pp [:tbl_rows, lines, rows]
 
     def inline_hd_chap(chap, id)
       n = chap.headline_index.number(id)
-      if chap.number and @book.config['secnolevel'] >= n.split('.').size
-        str = I18n.t('chapter_quote', "#{n} #{compile_inline(chap.headline(id).caption)}")
+      if n.present? && chap.number && over_secnolevel?(n)
+        str = I18n.t('hd_quote', [n, compile_inline(chap.headline(id).caption)])
       else
-        str = I18n.t('chapter_quote', compile_inline(chap.headline(id).caption))
+        str = I18n.t('hd_quote_without_number', compile_inline(chap.headline(id).caption))
       end
       if @book.config['chapterlink']
         anchor = 'h' + n.gsub('.', '-')
@@ -1084,54 +1131,43 @@ pp [:tbl_rows, lines, rows]
     end
 
     def inline_list(id)
+      str = super(id)
       chapter, id = extract_chapter_id(id)
-      str =
-        if get_chap(chapter)
-          "#{I18n.t('list')}#{I18n.t('format_number', [get_chap(chapter), chapter.list(id).number])}"
-        else
-          "#{I18n.t('list')}#{I18n.t('format_number_without_chapter', [chapter.list(id).number])}"
-        end
       if @book.config['chapterlink']
-        %Q(<span class="listref"><a href="./#{chapter.id}#{extname}##{id}">#{str}</a></span>)
+        %Q(<span class="listref"><a href="./#{chapter.id}#{extname}##{normalize_id(id)}">#{str}</a></span>)
       else
         %Q(<span class="listref">#{str}</span>)
       end
-    rescue KeyError
-      error "unknown list: #{id}"
     end
 
     def inline_table(id)
+      str = super(id)
       chapter, id = extract_chapter_id(id)
-      str =
-        if get_chap(chapter)
-          "#{I18n.t('table')}#{I18n.t('format_number', [get_chap(chapter), chapter.table(id).number])}"
-        else
-          "#{I18n.t('table')}#{I18n.t('format_number_without_chapter', [chapter.table(id).number])}"
-        end
       if @book.config['chapterlink']
-        %Q(<span class="tableref"><a href="./#{chapter.id}#{extname}##{id}">#{str}</a></span>)
+        %Q(<span class="tableref"><a href="./#{chapter.id}#{extname}##{normalize_id(id)}">#{str}</a></span>)
       else
         %Q(<span class="tableref">#{str}</span>)
       end
-    rescue KeyError
-      error "unknown table: #{id}"
     end
 
     def inline_img(id)
+      str = super(id)
       chapter, id = extract_chapter_id(id)
-      str =
-        if get_chap(chapter)
-          "#{I18n.t('image')}#{I18n.t('format_number', [get_chap(chapter), chapter.image(id).number])}"
-        else
-          "#{I18n.t('image')}#{I18n.t('format_number_without_chapter', [chapter.image(id).number])}"
-        end
       if @book.config['chapterlink']
         %Q(<span class="imgref"><a href="./#{chapter.id}#{extname}##{normalize_id(id)}">#{str}</a></span>)
       else
         %Q(<span class="imgref">#{str}</span>)
       end
-    rescue KeyError
-      error "unknown image: #{id}"
+    end
+
+    def inline_eq(id)
+      str = super(id)
+      chapter, id = extract_chapter_id(id)
+      if @book.config['chapterlink']
+        %Q(<span class="eqref"><a href="./#{chapter.id}#{extname}##{normalize_id(id)}">#{str}</a></span>)
+      else
+        %Q(<span class="eqref">#{str}</span>)
+      end
     end
 
     def inline_asis(str, tag)
@@ -1244,6 +1280,10 @@ pp [:tbl_rows, lines, rows]
       %Q(<span class="#{style}">#{escape(str)}</span>)
     end
 
+    def inline_balloon(str)
+      %Q(<span class="balloon">#{escape_html(str)}</span>)
+    end
+
     def inline_raw(str)
       super(str)
     end
@@ -1276,7 +1316,19 @@ pp [:tbl_rows, lines, rows]
       @ol_num = num.to_i
     end
 
+    def defer_math_image(str, path, key)
+      # for Re:VIEW >3
+      File.open(File.join(File.dirname(path), '__IMGMATH_BODY__.tex'), 'a+') do |f|
+        f.puts str
+        f.puts '\\clearpage'
+      end
+      File.open(File.join(File.dirname(path), '__IMGMATH_BODY__.map'), 'a+') do |f|
+        f.puts key
+      end
+    end
+
     def make_math_image(str, path, fontsize = 12)
+      # Re:VIEW 2 compatibility
       fontsize2 = (fontsize * 1.2).round.to_i
       texsrc = <<-EOB
 \\documentclass[12pt]{article}
@@ -1297,7 +1349,11 @@ pp [:tbl_rows, lines, rows]
         tex_path = File.join(tmpdir, 'tmpmath.tex')
         dvi_path = File.join(tmpdir, 'tmpmath.dvi')
         File.write(tex_path, texsrc)
-        system("latex --interaction=nonstopmode --output-directory=#{tmpdir} #{tex_path} && dvipng -T tight -z9 -o #{path} #{dvi_path}")
+        cmd = "latex --interaction=nonstopmode --output-directory=#{tmpdir} #{tex_path} && dvipng -T tight -z9 -o #{path} #{dvi_path}"
+        out, status = Open3.capture2e(cmd)
+        unless status.success?
+          error "latex compile error\n\nError log:\n" + out
+        end
       end
     end
   end
