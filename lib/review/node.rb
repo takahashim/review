@@ -204,7 +204,7 @@ pp [:BE_to_doc, @content]
       '{"ruleName":"' + self.class.to_s.sub(/ReVIEW::/,"").sub(/Node$/,"") + '",' +
         %Q|"symbol":"#{@symbol}",| +
         "\"line\":#{position.to_s}," +
-        (@concat ? '"childNodes":[' + @content.map(&:to_json).join(",") + ']' : '"childNodes":[]') + '}'
+        (@content ? '"childNodes":[' + @content.map(&:to_json).join(",") + ']' : '"childNodes":[]') + '}'
     end
   end
 
@@ -317,6 +317,23 @@ pp [:BE_to_doc, @content]
 
     def to_doc
       @compiler.compile_raw(@builder, @content.join(""))
+    end
+  end
+
+  class EmbedNode < Node
+    def initialize(compiler, builder, position, content)
+      @compiler = compiler
+      @builder = builder
+      @position = position
+      @content = content
+    end
+    attr_reader :compiler
+    attr_reader :builder
+    attr_reader :position
+    attr_reader :content
+
+    def to_doc
+      @compiler.compile_embed(@builder, @content.join(""))
     end
   end
 

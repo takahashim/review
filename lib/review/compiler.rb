@@ -320,7 +320,7 @@ module ReVIEW
       level = m[1].size
       tag = m[2]
       label = m[3]
-      caption = NodeList.new(TextNode.new(self, position, m[4].strip))
+      caption = text(m[4].strip)
       HeadlineNode.new(self, position, level, tag, label, caption)
     end
 
@@ -683,6 +683,9 @@ pp [:read_block, buf]
         args = ['(NoArgument)'] * syntax.min_argc
       end
       if syntax.block_allowed?
+        if syntax.name == :embed
+          return EmbedNode.new(self, @strategy.target_name, position, lines)
+        end
         content = parse_block_content(lines, syntax.code_block?)
         if syntax.code_block?
           CodeBlockElementNode.new(self, position, syntax.name, args, content)
@@ -707,11 +710,11 @@ pp [:read_block, buf]
       end
       pp [:lines, lines]
       if code_block
-        return text(lines)
+        return NodeList.new(text(lines))
       end
       buf = []
       list = NodeList.new
-      lines.each_line do |line|
+      lines.each do |line|
         if line.chomp.empty?
           list << text(buf.join + line)
           buf = []
@@ -819,7 +822,8 @@ pp [:compile_block, lines]
       if !@strategy.respond_to?("inline_#{op}") && !@strategy.respond_to?("node_inline_#{op}")
         raise "strategy does not support inline op: @<#{op}>"
       end
-      InlineElementNode.new(self, position, op, [arg])
+      i_node = InlineElementNode.new(self, position, op, [arg])
+      i_node
     rescue => e
       error e.message
       TextNode.new(self, position, str)
@@ -847,6 +851,15 @@ pp [:compile_block, lines]
       c = @strategy.class.to_s.gsub(/ReVIEW::/, '').gsub(/Builder/, '').downcase
       if !builders || builders.include?(c)
         content.gsub("\\n", "\n")
+      else
+        ""
+      end
+    end
+
+    def compile_embed(builders, content)
+      c = @strategy.class.to_s.gsub(/ReVIEW::/, '').gsub(/Builder/, '').downcase
+      if !builders || builders.include?(c)
+        content
       else
         ""
       end

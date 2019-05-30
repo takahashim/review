@@ -131,9 +131,9 @@ module ReVIEW
       if caption.empty?
         buf << a_id + "\n" if label
       elsif label
-        buf << %Q(<h#{level} id="#{normalize_id(label)}">#{a_id}#{prefix}#{compile_inline(caption)}</h#{level}>) + "\n"
+        buf << %Q(<h#{level} id="#{normalize_id(label)}">#{a_id}#{prefix}#{caption}</h#{level}>) + "\n"
       else
-        buf << %Q(<h#{level}>#{a_id}#{prefix}#{compile_inline(caption)}</h#{level}>) + "\n"
+        buf << %Q(<h#{level}>#{a_id}#{prefix}#{caption}</h#{level}>) + "\n"
       end
       buf
     end
@@ -605,7 +605,6 @@ pp [:listnum, lines]
 
     def texequation(lines, id = nil, caption = '')
       buf = ""
-      buf << %Q(<div class="equation">) + "\n"
       if id
         buf << texequation_header(id, caption)
       end
@@ -633,7 +632,7 @@ pp [:listnum, lines]
 
     def texequation_body(lines)
       buf = ''
-      buf << %Q(<div class="equation">)
+      buf << %Q(<div class="equation">\n)
       if @book.config['mathml']
         require 'math_ml'
         require 'math_ml/symbol/character_reference'
