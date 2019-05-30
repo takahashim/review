@@ -607,7 +607,7 @@ pp [:listnum, lines]
       buf = ""
       buf << %Q(<div class="equation">) + "\n"
       if id
-        buf << texequation_header id, caption
+        buf << texequation_header(id, caption)
       end
 
       buf << texequation_body(lines)
