@@ -23,78 +23,102 @@ module ReVIEW
     end
     private :builder_init_file
 
-    def puts(str)
+    def reset_blank
       @blank_seen = false
-      super
     end
 
     def blank
+      buf = ''
       unless @blank_seen
-        @output.puts
+        buf << "\n"
       end
       @blank_seen = true
+      buf
     end
 
     def headline(level, _label, caption)
-      blank
+      buf = ''
+      buf << blank
       prefix = '#' * level
-      puts "#{prefix} #{caption}"
-      blank
+      reset_blank
+      buf << "#{prefix} #{caption}\n"
+      buf << blank
+      buf
     end
 
     def quote(lines)
-      blank
-      puts split_paragraph(lines).map { |line| "> #{line}" }.join("\n> \n")
-      blank
+      buf = ''
+      buf << blank
+      reset_blank
+      buf << split_paragraph(lines).map { |line| "> #{line}" }.join("> \n")
+      buf << blank
+      buf
     end
 
     def paragraph(lines)
       if @noindent
-        puts %Q(<p class="noindent">#{lines.join}</p>)
-        puts "\n"
         @noindent = nil
+        reset_blank
+        %Q(<p class="noindent">#{lines.join}</p>\n\n)
       else
-        puts lines.join
-        puts "\n"
+        reset_blank
+        lines.join + "\n\n"
       end
     end
 
     def noindent
       @noindent = true
+      ''
     end
 
     def list_header(id, caption, lang)
+      buf = ''
       if get_chap.nil?
-        print %Q(リスト#{@chapter.list(id).number} #{compile_inline(caption)}\n\n)
+        buf << %Q(リスト#{@chapter.list(id).number} #{compile_inline(caption)}\n\n)
       else
-        print %Q(リスト#{get_chap}.#{@chapter.list(id).number} #{compile_inline(caption)}\n\n)
+        buf << %Q(リスト#{get_chap}.#{@chapter.list(id).number} #{compile_inline(caption)}\n\n)
       end
       lang ||= ''
-      puts "```#{lang}"
+      reset_blank
+      buf << "```#{lang}\n"
+      buf
     end
 
     def list_body(_id, lines, _lang)
+      buf = ''
       lines.each do |line|
-        puts detab(line)
+        buf << detab(line) + "\n"
       end
-      puts '```'
+      buf << '```' + "\n"
+      reset_blank
+      buf
     end
 
     def ul_begin
-      blank if @ul_indent == 0
+      buf = ''
+      if @ul_indent == 0
+        buf << blank
+      end
       @ul_indent += 1
+      buf
     end
 
     def ul_item_begin(lines)
-      puts '  ' * (@ul_indent - 1) + '* ' + lines.join
+      reset_blank
+      '  ' * (@ul_indent - 1) + '* ' + lines.join + "\n"
     end
 
     def ul_item_end
+      ''
     end
 
     def ul_end
+      buf = ''
       @ul_indent -= 1
-      blank if @ul_indent == 0
+      if @ul_indent == 0
+        buf << blank
+      end
+      buf
     end
 
     def ol_begin
@@ -102,7 +126,8 @@ module ReVIEW
     end
 
     def ol_item(lines, num)
-      puts "#{num}. #{lines.join}"
+      reset_blank
+      "#{num}. #{lines.join}\n"
     end
 
     def ol_end
@@ -110,46 +135,50 @@ module ReVIEW
     end
 
     def dl_begin
-      puts '<dl>'
+      reset_blank
+      "<dl>\n"
     end
 
     def dt(line)
-      puts "<dt>#{line}</dt>"
+      "<dt>#{line}</dt>\n"
     end
 
     def dd(lines)
-      puts "<dd>#{lines.join}</dd>"
+      "<dd>#{lines.join}</dd>\n"
     end
 
     def dl_end
-      puts '</dl>'
+      "</dl>\n"
     end
 
     def emlist(lines, caption = nil, lang = nil)
-      blank
+      buf = "\n"
       if caption
-        puts caption
-        print "\n"
+        buf << caption + "\n\n"
       end
       lang ||= ''
-      puts "```#{lang}"
+      buf << "```#{lang}\n"
       lines.each do |line|
-        puts detab(line)
+        buf << detab(line) + "\n"
       end
-      puts '```'
-      blank
+      buf << "```\n\n"
+      buf
     end
 
     def captionblock(type, lines, caption, _specialstyle = nil)
-      puts %Q(<div class="#{type}">)
-      puts %Q(<p class="caption">#{compile_inline(caption)}</p>) if caption.present?
+      buf = ''
+      buf << %Q(<div class="#{type}">\n)
+      buf << %Q(<p class="caption">#{caption}</p>\n) if caption.present?
       blocked_lines = split_paragraph(lines)
-      puts blocked_lines.join("\n")
-      puts '</div>'
+      buf << blocked_lines.join("\n") + "\n"
+      buf << "</div>\n"
+      reset_blank
+      buf
     end
 
     def hr
-      puts '----'
+      reset_blank
+      "----\n"
     end
 
     def compile_href(url, label)
@@ -196,13 +225,17 @@ module ReVIEW
     end
 
     def image_image(id, caption, _metric)
-      blank
-      puts "![#{compile_inline(caption)}](#{@chapter.image(id).path.sub(%r{\A\./}, '')})"
-      blank
+      buf = ''
+      buf << "\n"
+      buf << "![#{compile_inline(caption)}](#{@chapter.image(id).path.sub(%r{\A\./}, '')})\n"
+      buf << "\n"
+      buf
     end
 
     def image_dummy(_id, _caption, lines)
-      puts lines.join
+      buf = ''
+      buf << lines.join + "\n"
+      buf
     end
 
     def inline_img(id)
@@ -216,13 +249,14 @@ module ReVIEW
     end
 
     def indepimage(_lines, id, caption = '', _metric = nil)
-      blank
-      puts "![#{compile_inline(caption)}](#{@chapter.image(id).path.sub(%r{\A\./}, '')})"
-      blank
+      buf = ''
+      buf << "\n"
+      buf << "![#{compile_inline(caption)}](#{@chapter.image(id).path.sub(%r{\A\./}, '')})\n\n"
+      buf
     end
 
     def pagebreak
-      puts '{pagebreak}'
+      "{pagebreak}\n"
     end
 
     def image_ext
@@ -230,14 +264,17 @@ module ReVIEW
     end
 
     def cmd(lines)
-      puts '```shell-session'
+      buf = ''
+      buf << '```shell-session' + "\n"
       lines.each do |line|
-        puts detab(line)
+        buf << detab(line) + "\n"
       end
-      puts '```'
+      buf << '```' + "\n"
+      buf
     end
 
     def table(lines, id = nil, caption = nil)
+      buf = ''
       rows = []
       sepidx = nil
       lines.each_with_index do |line, idx|
@@ -252,49 +289,55 @@ module ReVIEW
       rows = adjust_n_cols(rows)
 
       begin
-        table_header id, caption unless caption.nil?
+        buf << table_header(id, caption) unless caption.nil?
       rescue KeyError
         error "no such table: #{id}"
       end
-      table_begin rows.first.size
-      return if rows.empty?
+      buf << table_begin(rows.first.size)
+      if rows.empty?
+        return buf
+      end
       if sepidx
         sepidx.times do
-          tr(rows.shift.map { |s| th(s) })
+          buf << tr(rows.shift.map { |s| th(s) })
         end
-        table_border rows.first.size
+        buf << table_border(rows.first.size)
         rows.each do |cols|
-          tr(cols.map { |s| td(s) })
+          buf << tr(cols.map { |s| td(s) })
         end
       else
         rows.each do |cols|
           h, *cs = *cols
-          tr([th(h)] + cs.map { |s| td(s) })
+          buf << tr([th(h)] + cs.map { |s| td(s) })
         end
       end
-      table_end
+      buf << table_end
+      buf
     end
 
     def table_header(id, caption)
+      buf = ''
       if id.nil?
-        puts compile_inline(caption)
+        buf << compile_inline(caption) + "\n"
       elsif get_chap
-        puts %Q(#{I18n.t('table')}#{I18n.t('format_number_header', [get_chap, @chapter.table(id).number])}#{I18n.t('caption_prefix')}#{compile_inline(caption)})
+        buf << %Q(#{I18n.t('table')}#{I18n.t('format_number_header', [get_chap, @chapter.table(id).number])}#{I18n.t('caption_prefix')}#{compile_inline(caption)}) + "\n"
       else
-        puts %Q(#{I18n.t('table')}#{I18n.t('format_number_header_without_chapter', [@chapter.table(id).number])}#{I18n.t('caption_prefix')}#{compile_inline(caption)})
+        buf << %Q(#{I18n.t('table')}#{I18n.t('format_number_header_without_chapter', [@chapter.table(id).number])}#{I18n.t('caption_prefix')}#{compile_inline(caption)}) + "\n"
       end
-      blank
+      buf << "\n"
+      buf
     end
 
     def table_begin(ncols)
+      ''
     end
 
     def tr(rows)
-      puts "|#{rows.join('|')}|"
+      "|#{rows.join('|')}|\n"
     end
 
     def table_border(ncols)
-      puts((0..ncols).map { '|' }.join(':--'))
+      (0..ncols).map { '|' }.join(':--') + "\n"
     end
 
     def th(str)
@@ -306,12 +349,11 @@ module ReVIEW
     end
 
     def table_end
-      blank
+      "\n"
     end
 
     def footnote(id, str)
-      puts "[^#{id}]: #{compile_inline(str)}"
-      blank
+      "[^#{id}]: #{compile_inline(str)}\n\n"
     end
 
     def inline_fn(id)
@@ -345,13 +387,15 @@ module ReVIEW
     end
 
     def comment(lines, comment = nil)
-      return unless @book.config['draft']
+      unless @book.config['draft']
+        return ''
+      end
       lines ||= []
       unless comment.blank?
         lines.unshift comment
       end
       str = lines.join('<br />')
-      puts %Q(<div class="red">#{escape(str)}</div>)
+      %Q(<div class="red">#{escape(str)}</div>\n)
     end
 
     def inline_icon(id)
@@ -372,9 +416,11 @@ module ReVIEW
     end
 
     def flushright(lines)
-      puts %Q(<div class="flushright">)
-      puts lines.join
-      puts %Q(</div>)
+      buf = ''
+      buf << %Q(<div class="flushright">) + "\n"
+      buf << lines.join + "\n"
+      buf << %Q(</div>) + "\n"
+      buf
     end
   end
 end # module ReVIEW

@@ -170,6 +170,7 @@ BBB
   end
 
   def test_ruby
+    I18n.setup
     actual = compile_block('@<ruby>{謳,うた}い文句')
     assert_equal "<ruby><rb>謳</rb><rp>（</rp><rt>うた</rt><rp>）</rp></ruby>い文句\n\n", actual
   end
