@@ -117,7 +117,7 @@ module ReVIEW
     end
 
     def headline(level, label, caption)
-      buf = ""
+      buf = ''
       prefix, anchor = headline_prefix(level)
       if prefix
         prefix = %Q(<span class="secno">#{prefix}</span>)
@@ -139,7 +139,7 @@ module ReVIEW
     end
 
     def nonum_begin(level, label, caption)
-      buf = ""
+      buf = ''
       @nonum_counter += 1
       buf << "\n" if level > 1
       return unless caption.present?
@@ -156,7 +156,7 @@ module ReVIEW
     end
 
     def notoc_begin(level, label, caption)
-      buf = ""
+      buf = ''
       @nonum_counter += 1
       buf << "\n" if level > 1
       return unless caption.present?
@@ -173,7 +173,7 @@ module ReVIEW
     end
 
     def nodisp_begin(level, label, caption)
-      buf = ""
+      buf = ''
       @nonum_counter += 1
       buf << "\n" if level > 1
       return unless caption.present?
@@ -190,7 +190,7 @@ module ReVIEW
     end
 
     def column_begin(level, label, caption)
-      buf = ""
+      buf = ''
       buf << %Q(<div class="column">) + "\n"
 
       @column += 1
@@ -212,7 +212,7 @@ module ReVIEW
     end
 
     def xcolumn_begin(level, label, caption)
-      buf = ""
+      buf = ''
       buf << %Q(<div class="xcolumn">) + "\n"
       buf << headline(level, label, caption)
       buf
@@ -223,7 +223,7 @@ module ReVIEW
     end
 
     def ref_begin(level, label, caption)
-      buf = ""
+      buf = ''
       buf << %Q(<div class="reference">)
       buf << headline(level, label, caption)
       buf
@@ -234,7 +234,7 @@ module ReVIEW
     end
 
     def sup_begin(level, label, caption)
-      buf = ""
+      buf = ''
       buf << %Q(<div class="supplement">)
       buf << headline(level, label, caption)
       buf
@@ -245,7 +245,7 @@ module ReVIEW
     end
 
     def captionblock(type, lines, caption)
-      buf = ""
+      buf = ''
       buf << %Q(<div class="#{type}">\n)
       if caption.present?
         buf << %Q(<p class="caption">#{caption}</p>\n)
@@ -305,7 +305,7 @@ module ReVIEW
     end
 
     def box(lines, caption = nil)
-      buf = ""
+      buf = ''
       buf << %Q(<div class="syntax">) + "\n"
       if caption.present?
         buf << %Q(<p class="caption">#{caption}</p>) + "\n"
@@ -340,7 +340,7 @@ module ReVIEW
     end
 
     def ol_begin
-      buf = ""
+      buf = ''
       if @ol_num
         buf << %Q(<ol start="#{@ol_num}">) + "\n" # it's OK in HTML5, but not OK in XHTML1.1
         @ol_num = nil
@@ -375,7 +375,7 @@ module ReVIEW
     end
 
     def paragraph(lines)
-      buf = ""
+      buf = ''
       if @noindent
         buf << %Q(<p class="noindent">#{lines.join}</p>\n)
         @noindent = nil
@@ -390,7 +390,7 @@ module ReVIEW
     end
 
     def read(lines)
-      buf = ""
+      buf = ''
       blocked_lines = split_paragraph(lines)
       buf << %Q(<div class="lead">\n#{blocked_lines.join("\n")}\n</div>\n)
       buf
@@ -399,7 +399,7 @@ module ReVIEW
     alias_method :lead, :read
 
     def list(lines, id, caption, lang = nil)
-      buf = ""
+      buf = ''
       buf << %Q(<div id="#{normalize_id(id)}" class="caption-code">\n)
       begin
         buf << list_header(id, caption, lang)
@@ -412,7 +412,7 @@ module ReVIEW
     end
 
     def list_header(id, caption, _lang)
-      buf = ""
+      buf = ''
       if get_chap
         buf << %Q(<p class="caption">#{I18n.t('list')}#{I18n.t('format_number_header', [get_chap, @chapter.list(id).number])}#{I18n.t('caption_prefix')}#{caption}</p>\n)
       else
@@ -422,7 +422,7 @@ module ReVIEW
     end
 
     def list_body(_id, lines, lang)
-      buf = ""
+      buf = ''
       class_names = ['list']
       lexer = lang
       class_names.push("language-#{lexer}") unless lexer.blank?
@@ -446,7 +446,7 @@ module ReVIEW
     end
 
     def source_header(caption)
-      buf = ""
+      buf = ''
       if caption.present?
         buf << %Q(<p class="caption">#{caption}</p>\n)
       end
@@ -454,7 +454,7 @@ module ReVIEW
     end
 
     def source_body(_id, lines, lang)
-      buf = ""
+      buf = ''
       buf << %Q(<pre class="source">)
       body = lines.inject('') { |i, j| i + detab(j) + "\n" }
       lexer = lang
@@ -464,7 +464,7 @@ module ReVIEW
     end
 
     def listnum(lines, id, caption, lang = nil)
-      buf = ""
+      buf = ''
       buf << %Q(<div id="#{normalize_id(id)}" class="code">) + "\n"
       begin
         buf << list_header(id, caption, lang)
@@ -477,7 +477,7 @@ module ReVIEW
     end
 
     def listnum_body(lines, lang)
-pp [:listnum, lines]
+      pp [:listnum, lines]
       buf = ''
       body = lines.inject('') { |i, j| i + detab(j) + "\n" }
       lexer = lang
@@ -501,7 +501,7 @@ pp [:listnum, lines]
     end
 
     def emlist(lines, caption = nil, lang = nil)
-      buf = ""
+      buf = ''
       buf << %Q(<div class="emlist-code">) + "\n"
       if caption.present?
         buf << %Q(<p class="caption">#{caption}</p>) + "\n"
@@ -522,7 +522,7 @@ pp [:listnum, lines]
     end
 
     def emlistnum(lines, caption = nil, lang = nil)
-      buf = ""
+      buf = ''
       buf << %Q(<div class="emlistnum-code">) + "\n"
       if caption.present?
         buf << %Q(<p class="caption">#{caption}</p>) + "\n"
@@ -551,7 +551,7 @@ pp [:listnum, lines]
     end
 
     def cmd(lines, caption = nil)
-      buf = ""
+      buf = ''
       buf << %Q(<div class="cmd-code">) + "\n"
       if caption.present?
         buf << %Q(<p class="caption">#{caption}</p>) + "\n"
@@ -569,7 +569,7 @@ pp [:listnum, lines]
     end
 
     def quotedlist(lines, css_class)
-      buf = ""
+      buf = ''
       buf << %Q(<blockquote><pre class="#{css_class}">)
       lines.each do |line|
         buf << detab(line) + "\n"
@@ -585,7 +585,7 @@ pp [:listnum, lines]
     end
 
     def doorquote(lines, ref)
-      buf = ""
+      buf = ''
       blocked_lines = split_paragraph(lines)
       buf << %Q(<blockquote style="text-align:right;">) + "\n"
       buf << blocked_lines.join("\n") + "\n"
@@ -595,7 +595,7 @@ pp [:listnum, lines]
     end
 
     def talk(lines)
-      buf = ""
+      buf = ''
       buf << %Q(<div class="talk">) + "\n"
       blocked_lines = split_paragraph(lines)
       buf << blocked_lines.join("\n") + "\n"
@@ -604,7 +604,7 @@ pp [:listnum, lines]
     end
 
     def texequation(lines, id = nil, caption = '')
-      buf = ""
+      buf = ''
       if id
         buf << texequation_header(id, caption)
       end
@@ -685,7 +685,7 @@ pp [:listnum, lines]
     end
 
     def image_image(id, caption, metric)
-      buf = ""
+      buf = ''
       metrics = parse_metric('html', metric)
       buf << %Q(<div id="#{normalize_id(id)}" class="image">) + "\n"
       buf << %Q(<img src="#{@chapter.image(id).path.sub(%r{\A\./}, '')}" alt="#{escape(caption)}"#{metrics} />) + "\n"
@@ -695,7 +695,7 @@ pp [:listnum, lines]
     end
 
     def image_dummy(id, caption, lines)
-      buf = ""
+      buf = ''
       warn "image not bound: #{id}"
       buf << %Q(<div id="#{normalize_id(id)}" class="image">) + "\n"
       buf << %Q(<pre class="dummyimage">) + "\n"
@@ -709,7 +709,7 @@ pp [:listnum, lines]
     end
 
     def image_header(id, caption)
-      buf = ""
+      buf = ''
       buf << %Q(<p class="caption">) + "\n"
       if get_chap
         buf << %Q(#{I18n.t('image')}#{I18n.t('format_number_header', [get_chap, @chapter.image(id).number])}#{I18n.t('caption_prefix')}#{caption}) + "\n"
@@ -721,7 +721,7 @@ pp [:listnum, lines]
     end
 
     def table(lines, id = nil, caption = nil)
-      buf = ""
+      buf = ''
       rows = []
       sepidx = nil
       lines.each_with_index do |line, idx|
@@ -733,7 +733,7 @@ pp [:listnum, lines]
         end
         rows.push(line.strip.split(/\t+/).map { |s| s.sub(/\A\./, '') })
       end
-pp [:tbl_rows, lines, rows]
+      pp [:tbl_rows, lines, rows]
       rows = adjust_n_cols(rows)
       if id
         buf << %Q(<div id="#{normalize_id(id)}" class="table">) + "\n"
@@ -768,7 +768,7 @@ pp [:tbl_rows, lines, rows]
     end
 
     def table_header(id, caption)
-      buf = ""
+      buf = ''
       if id.nil?
         buf << %Q(<p class="caption">#{caption}</p>) + "\n"
       elsif get_chap
@@ -800,7 +800,7 @@ pp [:tbl_rows, lines, rows]
     end
 
     def imgtable(lines, id, caption = nil, metric = nil)
-      buf = ""
+      buf = ''
       unless @chapter.image(id).bound?
         warn "image not bound: #{id}"
         buf << image_dummy(id, caption, lines)
@@ -840,7 +840,7 @@ pp [:tbl_rows, lines, rows]
     end
 
     def footnote(id, str)
-      buf = ""
+      buf = ''
       if @book.config['epubversion'].to_i == 3
         back = ''
         if @book.config['epubmaker'] && @book.config['epubmaker']['back_footnote']
@@ -855,7 +855,7 @@ pp [:tbl_rows, lines, rows]
     end
 
     def indepimage(lines, id, caption = '', metric = nil)
-      buf = ""
+      buf = ''
       metrics = parse_metric('html', metric)
       caption = '' unless caption.present?
       buf << %Q(<div id="#{normalize_id(id)}" class="image">) + "\n"
@@ -901,7 +901,7 @@ pp [:tbl_rows, lines, rows]
     end
 
     def bpo(lines)
-      buf = ""
+      buf = ''
       buf << '<bpo>' + "\n"
       lines.each do |line|
         buf << detab(line) + "\n"
@@ -912,7 +912,7 @@ pp [:tbl_rows, lines, rows]
 
     def noindent
       @noindent = true
-      ""
+      ''
     end
 
     def inline_labelref(idref)
@@ -1069,7 +1069,7 @@ pp [:tbl_rows, lines, rows]
     end
 
     def bibpaper(lines, id, caption)
-      buf = ""
+      buf = ''
       buf << %Q(<div class="bibpaper">) + "\n"
       buf << bibpaper_header(id, caption)
       buf << bibpaper_bibpaper(id, caption, lines) unless lines.empty?
@@ -1078,7 +1078,7 @@ pp [:tbl_rows, lines, rows]
     end
 
     def bibpaper_header(id, caption)
-      buf = ""
+      buf = ''
       buf << %Q(<a id="bib-#{normalize_id(id)}">)
       buf << "[#{@chapter.bibpaper(id).number}]"
       buf << '</a>'
