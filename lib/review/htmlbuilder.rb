@@ -144,10 +144,10 @@ module ReVIEW
       buf << "\n" if level > 1
       return unless caption.present?
       if label
-        buf << %Q(<h#{level} id="#{normalize_id(label)}">#{compile_inline(caption)}</h#{level}>) + "\n"
+        buf << %Q(<h#{level} id="#{normalize_id(label)}">#{caption}</h#{level}>) + "\n"
       else
         id = normalize_id("#{@chapter.name}_nonum#{@nonum_counter}")
-        buf << %Q(<h#{level} id="#{id}">#{compile_inline(caption)}</h#{level}>) + "\n"
+        buf << %Q(<h#{level} id="#{id}">#{caption}</h#{level}>) + "\n"
       end
       buf
     end
@@ -161,10 +161,10 @@ module ReVIEW
       buf << "\n" if level > 1
       return unless caption.present?
       if label
-        buf << %Q(<h#{level} id="#{normalize_id(label)}" notoc="true">#{compile_inline(caption)}</h#{level}>) + "\n"
+        buf << %Q(<h#{level} id="#{normalize_id(label)}" notoc="true">#{caption}</h#{level}>) + "\n"
       else
         id = normalize_id("#{@chapter.name}_nonum#{@nonum_counter}")
-        buf << %Q(<h#{level} id="#{id}" notoc="true">#{compile_inline(caption)}</h#{level}>) + "\n"
+        buf << %Q(<h#{level} id="#{id}" notoc="true">#{caption}</h#{level}>) + "\n"
       end
       buf
     end
@@ -178,10 +178,10 @@ module ReVIEW
       buf << "\n" if level > 1
       return unless caption.present?
       if label
-        buf << %Q(<a id="#{normalize_id(label)}" /><h#{level} id="#{normalize_id(label)}" hidden="true">#{compile_inline(caption)}</h#{level}>) + "\n"
+        buf << %Q(<a id="#{normalize_id(label)}" /><h#{level} id="#{normalize_id(label)}" hidden="true">#{caption}</h#{level}>) + "\n"
       else
         id = normalize_id("#{@chapter.name}_nonum#{@nonum_counter}")
-        buf << %Q(<a id="#{id}" /><h#{level} id="#{id}" hidden="true">#{compile_inline(caption)}</h#{level}>) + "\n"
+        buf << %Q(<a id="#{id}" /><h#{level} id="#{id}" hidden="true">#{caption}</h#{level}>) + "\n"
       end
       buf
     end
@@ -200,9 +200,9 @@ module ReVIEW
       if caption.empty?
         buf << a_id + "\n" if label
       elsif label
-        buf << %Q(<h#{level} id="#{normalize_id(label)}">#{a_id}#{compile_inline(caption)}</h#{level}>) + "\n"
+        buf << %Q(<h#{level} id="#{normalize_id(label)}">#{a_id}#{caption}</h#{level}>) + "\n"
       else
-        buf << %Q(<h#{level}>#{a_id}#{compile_inline(caption)}</h#{level}>) + "\n"
+        buf << %Q(<h#{level}>#{a_id}#{caption}</h#{level}>) + "\n"
       end
       buf
     end
@@ -248,7 +248,7 @@ module ReVIEW
       buf = ""
       buf << %Q(<div class="#{type}">\n)
       if caption.present?
-        buf << %Q(<p class="caption">#{compile_inline(caption)}</p>\n)
+        buf << %Q(<p class="caption">#{caption}</p>\n)
       end
       blocked_lines = split_paragraph(lines)
       buf << blocked_lines.join("\n") + "\n"
@@ -308,7 +308,7 @@ module ReVIEW
       buf = ""
       buf << %Q(<div class="syntax">) + "\n"
       if caption.present?
-        buf << %Q(<p class="caption">#{compile_inline(caption)}</p>) + "\n"
+        buf << %Q(<p class="caption">#{caption}</p>) + "\n"
       end
       buf << %Q(<pre class="syntax">)
       lines.each do |line|
@@ -414,9 +414,9 @@ module ReVIEW
     def list_header(id, caption, _lang)
       buf = ""
       if get_chap
-        buf << %Q(<p class="caption">#{I18n.t('list')}#{I18n.t('format_number_header', [get_chap, @chapter.list(id).number])}#{I18n.t('caption_prefix')}#{compile_inline(caption)}</p>\n)
+        buf << %Q(<p class="caption">#{I18n.t('list')}#{I18n.t('format_number_header', [get_chap, @chapter.list(id).number])}#{I18n.t('caption_prefix')}#{caption}</p>\n)
       else
-        buf << %Q(<p class="caption">#{I18n.t('list')}#{I18n.t('format_number_header_without_chapter', [@chapter.list(id).number])}#{I18n.t('caption_prefix')}#{compile_inline(caption)}</p>\n)
+        buf << %Q(<p class="caption">#{I18n.t('list')}#{I18n.t('format_number_header_without_chapter', [@chapter.list(id).number])}#{I18n.t('caption_prefix')}#{caption}</p>\n)
       end
       buf
     end
@@ -448,7 +448,7 @@ module ReVIEW
     def source_header(caption)
       buf = ""
       if caption.present?
-        buf << %Q(<p class="caption">#{compile_inline(caption)}</p>\n)
+        buf << %Q(<p class="caption">#{caption}</p>\n)
       end
       buf
     end
@@ -504,7 +504,7 @@ pp [:listnum, lines]
       buf = ""
       buf << %Q(<div class="emlist-code">) + "\n"
       if caption.present?
-        buf << %Q(<p class="caption">#{compile_inline(caption)}</p>) + "\n"
+        buf << %Q(<p class="caption">#{caption}</p>) + "\n"
       end
       class_names = ['emlist']
       class_names.push("language-#{lang}") unless lang.blank?
@@ -525,7 +525,7 @@ pp [:listnum, lines]
       buf = ""
       buf << %Q(<div class="emlistnum-code">) + "\n"
       if caption.present?
-        buf << %Q(<p class="caption">#{compile_inline(caption)}</p>) + "\n"
+        buf << %Q(<p class="caption">#{caption}</p>) + "\n"
       end
 
       body = lines.inject('') { |i, j| i + detab(j) + "\n" }
@@ -554,7 +554,7 @@ pp [:listnum, lines]
       buf = ""
       buf << %Q(<div class="cmd-code">) + "\n"
       if caption.present?
-        buf << %Q(<p class="caption">#{compile_inline(caption)}</p>) + "\n"
+        buf << %Q(<p class="caption">#{caption}</p>) + "\n"
       end
       buf << %Q(<pre class="cmd">)
       body = lines.inject('') { |i, j| i + detab(j) + "\n" }
@@ -622,9 +622,9 @@ pp [:listnum, lines]
       buf = ''
       buf << %Q(<div id="#{normalize_id(id)}" class="caption-equation">\n)
       if get_chap
-        buf << %Q(<p class="caption">#{I18n.t('equation')}#{I18n.t('format_number_header', [get_chap, @chapter.equation(id).number])}#{I18n.t('caption_prefix')}#{compile_inline(caption)}</p>\n)
+        buf << %Q(<p class="caption">#{I18n.t('equation')}#{I18n.t('format_number_header', [get_chap, @chapter.equation(id).number])}#{I18n.t('caption_prefix')}#{caption}</p>\n)
       else
-        buf << %Q(<p class="caption">#{I18n.t('equation')}#{I18n.t('format_number_header_without_chapter', [@chapter.equation(id).number])}#{I18n.t('caption_prefix')}#{compile_inline(caption)}</p>\n)
+        buf << %Q(<p class="caption">#{I18n.t('equation')}#{I18n.t('format_number_header_without_chapter', [@chapter.equation(id).number])}#{I18n.t('caption_prefix')}#{caption}</p>\n)
       end
 
       buf
@@ -688,7 +688,7 @@ pp [:listnum, lines]
       buf = ""
       metrics = parse_metric('html', metric)
       buf << %Q(<div id="#{normalize_id(id)}" class="image">) + "\n"
-      buf << %Q(<img src="#{@chapter.image(id).path.sub(%r{\A\./}, '')}" alt="#{escape(compile_inline(caption))}"#{metrics} />) + "\n"
+      buf << %Q(<img src="#{@chapter.image(id).path.sub(%r{\A\./}, '')}" alt="#{escape(caption)}"#{metrics} />) + "\n"
       buf << image_header(id, caption)
       buf << '</div>' + "\n"
       buf
@@ -712,9 +712,9 @@ pp [:listnum, lines]
       buf = ""
       buf << %Q(<p class="caption">) + "\n"
       if get_chap
-        buf << %Q(#{I18n.t('image')}#{I18n.t('format_number_header', [get_chap, @chapter.image(id).number])}#{I18n.t('caption_prefix')}#{compile_inline(caption)}) + "\n"
+        buf << %Q(#{I18n.t('image')}#{I18n.t('format_number_header', [get_chap, @chapter.image(id).number])}#{I18n.t('caption_prefix')}#{caption}) + "\n"
       else
-        buf << %Q(#{I18n.t('image')}#{I18n.t('format_number_header_without_chapter', [@chapter.image(id).number])}#{I18n.t('caption_prefix')}#{compile_inline(caption)}) + "\n"
+        buf << %Q(#{I18n.t('image')}#{I18n.t('format_number_header_without_chapter', [@chapter.image(id).number])}#{I18n.t('caption_prefix')}#{caption}) + "\n"
       end
       buf << '</p>' + "\n"
       buf
@@ -770,11 +770,11 @@ pp [:tbl_rows, lines, rows]
     def table_header(id, caption)
       buf = ""
       if id.nil?
-        buf << %Q(<p class="caption">#{compile_inline(caption)}</p>) + "\n"
+        buf << %Q(<p class="caption">#{caption}</p>) + "\n"
       elsif get_chap
-        buf << %Q(<p class="caption">#{I18n.t('table')}#{I18n.t('format_number_header', [get_chap, @chapter.table(id).number])}#{I18n.t('caption_prefix')}#{compile_inline(caption)}</p>) + "\n"
+        buf << %Q(<p class="caption">#{I18n.t('table')}#{I18n.t('format_number_header', [get_chap, @chapter.table(id).number])}#{I18n.t('caption_prefix')}#{caption}</p>) + "\n"
       else
-        buf << %Q(<p class="caption">#{I18n.t('table')}#{I18n.t('format_number_header_without_chapter', [@chapter.table(id).number])}#{I18n.t('caption_prefix')}#{compile_inline(caption)}</p>) + "\n"
+        buf << %Q(<p class="caption">#{I18n.t('table')}#{I18n.t('format_number_header_without_chapter', [@chapter.table(id).number])}#{I18n.t('caption_prefix')}#{caption}</p>) + "\n"
       end
       buf
     end
@@ -824,7 +824,7 @@ pp [:tbl_rows, lines, rows]
 
     def imgtable_image(id, caption, metric)
       metrics = parse_metric('html', metric)
-      %Q(<img src="#{@chapter.image(id).path.sub(%r{\A\./}, '')}" alt="#{escape(compile_inline(caption))}"#{metrics} />) + "\n"
+      %Q(<img src="#{@chapter.image(id).path.sub(%r{\A\./}, '')}" alt="#{escape(caption)}"#{metrics} />) + "\n"
     end
 
     def emtable(lines, caption = nil)
@@ -847,9 +847,9 @@ pp [:tbl_rows, lines, rows]
           back = %Q(<a href="#fnb-#{normalize_id(id)}">#{I18n.t('html_footnote_backmark')}</a>)
         end
         # XXX: back link must be located at first of p for Kindle.
-        buf << %Q(<div class="footnote" epub:type="footnote" id="fn-#{normalize_id(id)}"><p class="footnote">#{back}#{I18n.t('html_footnote_textmark', @chapter.footnote(id).number)}#{compile_inline(str)}</p></div>)
+        buf << %Q(<div class="footnote" epub:type="footnote" id="fn-#{normalize_id(id)}"><p class="footnote">#{back}#{I18n.t('html_footnote_textmark', @chapter.footnote(id).number)}#{str}</p></div>)
       else
-        buf << %Q(<div class="footnote" id="fn-#{normalize_id(id)}"><p class="footnote">[<a href="#fnb-#{normalize_id(id)}">*#{@chapter.footnote(id).number}</a>] #{compile_inline(str)}</p></div>) + "\n"
+        buf << %Q(<div class="footnote" id="fn-#{normalize_id(id)}"><p class="footnote">[<a href="#fnb-#{normalize_id(id)}">*#{@chapter.footnote(id).number}</a>] #{str}</p></div>) + "\n"
       end
       buf
     end
@@ -860,7 +860,7 @@ pp [:tbl_rows, lines, rows]
       caption = '' unless caption.present?
       buf << %Q(<div id="#{normalize_id(id)}" class="image">) + "\n"
       begin
-        buf << %Q(<img src="#{@chapter.image(id).path.sub(%r{\A\./}, '')}" alt="#{escape(compile_inline(caption))}"#{metrics} />) + "\n"
+        buf << %Q(<img src="#{@chapter.image(id).path.sub(%r{\A\./}, '')}" alt="#{escape(caption)}"#{metrics} />) + "\n"
       rescue
         warn "image not bound: #{id}"
         if lines
@@ -875,7 +875,7 @@ pp [:tbl_rows, lines, rows]
 
       if caption.present?
         buf << %Q(<p class="caption">) + "\n"
-        buf << %Q(#{I18n.t('numberless_image')}#{I18n.t('caption_prefix')}#{compile_inline(caption)}) + "\n"
+        buf << %Q(#{I18n.t('numberless_image')}#{I18n.t('caption_prefix')}#{caption}) + "\n"
         buf << '</p>' + "\n"
       end
       buf << '</div>' + "\n"
@@ -1082,7 +1082,7 @@ pp [:tbl_rows, lines, rows]
       buf << %Q(<a id="bib-#{normalize_id(id)}">)
       buf << "[#{@chapter.bibpaper(id).number}]"
       buf << '</a>'
-      buf << " #{compile_inline(caption)}\n"
+      buf << " #{caption}\n"
       buf
     end
 
@@ -1099,9 +1099,9 @@ pp [:tbl_rows, lines, rows]
     def inline_hd_chap(chap, id)
       n = chap.headline_index.number(id)
       if n.present? && chap.number && over_secnolevel?(n)
-        str = I18n.t('hd_quote', [n, compile_inline(chap.headline(id).caption)])
+        str = I18n.t('hd_quote', [n, chap.headline(id).caption])
       else
-        str = I18n.t('hd_quote_without_number', compile_inline(chap.headline(id).caption))
+        str = I18n.t('hd_quote_without_number', chap.headline(id).caption)
       end
       if @book.config['chapterlink']
         anchor = 'h' + n.gsub('.', '-')
@@ -1121,9 +1121,9 @@ pp [:tbl_rows, lines, rows]
 
     def inline_column_chap(chapter, id)
       if @book.config['chapterlink']
-        %Q(<a href="\##{column_label(id, chapter)}" class="columnref">#{I18n.t('column', compile_inline(chapter.column(id).caption))}</a>)
+        %Q(<a href="\##{column_label(id, chapter)}" class="columnref">#{I18n.t('column', chapter.column(id).caption)}</a>)
       else
-        I18n.t('column', compile_inline(chapter.column(id).caption))
+        I18n.t('column', chapter.column(id).caption)
       end
     rescue KeyError
       error "unknown column: #{id}"
