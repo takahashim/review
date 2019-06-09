@@ -173,6 +173,7 @@ pp [:BE_to_doc, @content]
     end
 
     def raw_lines
+      ## to_doc -> to_raw??
       self.content.to_doc.split(/\n/)
     end
   end

@@ -91,16 +91,17 @@ module ReVIEW
     end
 
     def headline(level, label, caption)
+      buf = ''
       case level
       when 1
         if @secttags
-          print '</sect4>' if @subsubsubsection > 0
-          print '</sect3>' if @subsubsection > 0
-          print '</sect2>' if @subsection > 0
-          print '</sect>' if @section > 0
+          buf << '</sect4>' if @subsubsubsection > 0
+          buf << '</sect3>' if @subsubsection > 0
+          buf << '</sect2>' if @subsection > 0
+          buf << '</sect>' if @section > 0
         end
 
-        print %Q(<chapter id="chap:#{@chapter.number}">) if @secttags
+        buf << %Q(<chapter id="chap:#{@chapter.number}">) if @secttags
 
         @section = 0
         @subsection = 0
@@ -108,44 +109,44 @@ module ReVIEW
         @subsubsubsection = 0
       when 2
         if @secttags
-          print '</sect4>' if @subsubsubsection > 0
-          print '</sect3>' if @subsubsection > 0
-          print '</sect2>' if @subsection > 0
-          print '</sect>' if @section > 0
+          buf << '</sect4>' if @subsubsubsection > 0
+          buf << '</sect3>' if @subsubsection > 0
+          buf << '</sect2>' if @subsection > 0
+          buf << '</sect>' if @section > 0
         end
         @section += 1
-        print %Q(<sect id="sect:#{@chapter.number}.#{@section}">) if @secttags
+        buf << %Q(<sect id="sect:#{@chapter.number}.#{@section}">) if @secttags
 
         @subsection = 0
         @subsubsection = 0
         @subsubsubsection = 0
       when 3
         if @secttags
-          print '</sect4>' if @subsubsubsection > 0
-          print '</sect3>' if @subsubsection > 0
-          print '</sect2>' if @subsection > 0
+          buf << '</sect4>' if @subsubsubsection > 0
+          buf << '</sect3>' if @subsubsection > 0
+          buf << '</sect2>' if @subsection > 0
         end
 
         @subsection += 1
-        print %Q(<sect2 id="sect:#{@chapter.number}.#{@section}.#{@subsection}">) if @secttags
+        buf << %Q(<sect2 id="sect:#{@chapter.number}.#{@section}.#{@subsection}">) if @secttags
 
         @subsubsection = 0
         @subsubsubsection = 0
       when 4
         if @secttags
-          print '</sect4>' if @subsubsubsection > 0
-          print '</sect3>' if @subsubsection > 0
+          buf << '</sect4>' if @subsubsubsection > 0
+          buf << '</sect3>' if @subsubsection > 0
         end
 
         @subsubsection += 1
-        print %Q(<sect3 id="sect:#{@chapter.number}.#{@section}.#{@subsection}.#{@subsubsection}">) if @secttags
+        buf << %Q(<sect3 id="sect:#{@chapter.number}.#{@section}.#{@subsection}.#{@subsubsection}">) if @secttags
 
         @subsubsubsection = 0
       when 5
-        print '</sect4>' if @secttags && @subsubsubsection > 0
+        buf << '</sect4>' if @secttags && @subsubsubsection > 0
 
         @subsubsubsection += 1
-        print %Q(<sect4 id="sect:#{@chapter.number}.#{@section}.#{@subsection}.#{@subsubsection}.#{@subsubsubsection}">) if @secttags
+        buf << %Q(<sect4 id="sect:#{@chapter.number}.#{@section}.#{@subsection}.#{@subsubsection}.#{@subsubsubsection}">) if @secttags
       else
         raise "caption level too deep or unsupported: #{level}"
       end
@@ -154,95 +155,110 @@ module ReVIEW
 
       label = label.nil? ? '' : %Q( id="#{label}")
       toccaption = escape(compile_inline(caption.gsub(/@<fn>\{.+?\}/, '')).gsub(/<[^>]+>/, ''))
-      puts %Q(<title#{label} aid:pstyle="h#{level}">#{prefix}#{compile_inline(caption)}</title><?dtp level="#{level}" section="#{prefix}#{toccaption}"?>)
+      buf << %Q(<title#{label} aid:pstyle="h#{level}">#{prefix}#{caption}</title><?dtp level="#{level}" section="#{prefix}#{toccaption}"?>)
+      buf
     end
 
     def ul_begin
+      buf = ''
       level = block_given? ? yield : ''
       level = nil if level == 1
-      puts "<ul#{level == 1 ? nil : level}>"
+      buf << "<ul#{level == 1 ? nil : level}>"
+      buf
     end
 
     def ul_item_begin(lines)
-      print %Q(<li aid:pstyle="ul-item">#{lines.join.chomp})
+      buf = ''
+      buf << %Q(<li aid:pstyle="ul-item">#{lines.join.chomp})
+      buf
     end
 
     def ul_item_end
-      puts '</li>'
+      '</li>'
     end
 
     def choice_single_begin
-      puts %Q(<choice type='single'>)
+      %Q(<choice type='single'>)
     end
 
     def choice_multi_begin
-      puts %Q(<choice type='multi'>)
+      %Q(<choice type='multi'>)
     end
 
     def choice_single_end
-      puts '</choice>'
+      '</choice>'
     end
 
     def choice_multi_end
-      puts '</choice>'
+      '</choice>'
     end
 
     def ul_end
       level = block_given? ? yield : ''
       level = nil if level == 1
-      puts "</ul#{level}>"
+      "</ul#{level}>"
     end
 
     def ol_begin
-      puts '<ol>'
+      buf = ''
+      buf << '<ol>'
       @ol_num ||= 1
+      buf
     end
 
     def ol_item(lines, num)
-      puts %Q(<li aid:pstyle="ol-item" olnum="#{@ol_num}" num="#{num}">#{lines.join.chomp}</li>)
+      buf = ''
+      buf << %Q(<li aid:pstyle="ol-item" olnum="#{@ol_num}" num="#{num}">#{lines.join.chomp}</li>)
       @ol_num += 1
+      buf
     end
 
     def ol_end
-      puts '</ol>'
+      buf = ''
+      buf << '</ol>'
       @ol_num = nil
+      buf
     end
 
     def olnum(num)
+      buf = ''
       @ol_num = num.to_i
+      buf
     end
 
     def dl_begin
-      puts '<dl>'
+      '<dl>'
     end
 
     def dt(line)
-      puts "<dt>#{line}</dt>"
+      "<dt>#{line}</dt>"
     end
 
     def dd(lines)
-      puts "<dd>#{lines.join.chomp}</dd>"
+      "<dd>#{lines.join.chomp}</dd>"
     end
 
     def dl_end
-      puts '</dl>'
+      '</dl>'
     end
 
     def paragraph(lines)
+      buf = ''
       if @noindent.nil?
         if lines[0] =~ /\A(\t+)/
-          puts %Q(<p inlist="#{$1.size}">#{lines.join.sub(/\A\t+/, '')}</p>)
+          buf << %Q(<p inlist="#{$1.size}">#{lines.join.sub(/\A\t+/, '')}</p>)
         else
-          puts "<p>#{lines.join}</p>"
+          buf << "<p>#{lines.join}</p>"
         end
       else
-        puts %Q(<p aid:pstyle="noindent" noindent='1'>#{lines.join}</p>)
+        buf << %Q(<p aid:pstyle="noindent" noindent='1'>#{lines.join}</p>)
         @noindent = nil
       end
+      buf
     end
 
     def read(lines)
-      puts %Q(<lead>#{split_paragraph(lines).join}</lead>)
+      %Q(<lead>#{split_paragraph(lines).join}</lead>)
     end
 
     alias_method :lead, :read
@@ -254,11 +270,13 @@ module ReVIEW
     private :column_label
 
     def inline_column_chap(chapter, id)
+      buf = ''
       if @book.config['chapterlink']
-        %Q(<link href="#{column_label(id, chapter)}">#{I18n.t('column', compile_inline(chapter.column(id).caption))}</link>)
+        buf << %Q(<link href="#{column_label(id, chapter)}">#{I18n.t('column', compile_inline(chapter.column(id).caption))}</link>)
       else
-        I18n.t('column', compile_inline(chapter.column(id).caption))
+        buf << I18n.t('column', compile_inline(chapter.column(id).caption))
       end
+      buf
     rescue KeyError
       error "unknown column: #{id}"
     end
@@ -268,35 +286,41 @@ module ReVIEW
     end
 
     def list_header(id, caption, _lang)
-      puts '<codelist>'
-      return true unless caption.present?
+      buf = ''
+      buf << '<codelist>'
+      return buf unless caption.present?
       if get_chap.nil?
-        puts %Q(<caption>#{I18n.t('list')}#{I18n.t('format_number_without_chapter', [@chapter.list(id).number])}#{I18n.t('caption_prefix_idgxml')}#{compile_inline(caption)}</caption>)
+        buf << %Q(<caption>#{I18n.t('list')}#{I18n.t('format_number_without_chapter', [@chapter.list(id).number])}#{I18n.t('caption_prefix_idgxml')}#{caption}</caption>)
       else
-        puts %Q(<caption>#{I18n.t('list')}#{I18n.t('format_number', [get_chap, @chapter.list(id).number])}#{I18n.t('caption_prefix_idgxml')}#{compile_inline(caption)}</caption>)
+        buf << %Q(<caption>#{I18n.t('list')}#{I18n.t('format_number', [get_chap, @chapter.list(id).number])}#{I18n.t('caption_prefix_idgxml')}#{caption}</caption>)
       end
+      buf
     end
 
     def codelines_body(lines)
+      buf = ''
       no = 1
       lines.each do |line|
         if @book.config['listinfo']
-          print %Q(<listinfo line="#{no}")
-          print %Q( begin="1") if no == 1
-          print %Q( end="#{no}") if no == lines.size
-          print '>'
+          buf << %Q(<listinfo line="#{no}")
+          buf << %Q( begin="1") if no == 1
+          buf << %Q( end="#{no}") if no == lines.size
+          buf << '>'
         end
-        print detab(line)
-        print "\n"
-        print '</listinfo>' if @book.config['listinfo']
+        buf << detab(line)
+        buf << "\n"
+        buf << '</listinfo>' if @book.config['listinfo']
         no += 1
       end
+      buf
     end
 
     def list_body(_id, lines, _lang)
-      print '<pre>'
-      codelines_body(lines)
-      puts '</pre></codelist>'
+      buf = ''
+      buf << '<pre>'
+      buf << codelines_body(lines)
+      buf << '</pre></codelist>'
+      buf
     end
 
     def emlist(lines, caption = nil, _lang = nil)
@@ -304,31 +328,35 @@ module ReVIEW
     end
 
     def emlistnum(lines, caption = nil, _lang = nil)
+      buf = ''
       lines2 = []
       first_line_num = line_num
       lines.each_with_index do |line, i|
         lines2 << detab(%Q(<span type='lineno'>) + (i + first_line_num).to_s.rjust(2) + ': </span>' + line)
       end
-      quotedlist lines2, 'emlistnum', caption
+      buf << quotedlist(lines2, 'emlistnum', caption)
+      buf
     end
 
     def listnum_body(lines, _lang)
-      print '<pre>'
+      buf = ''
+      buf << '<pre>'
       no = 1
       first_line_num = line_num
       lines.each_with_index do |line, i|
         if @book.config['listinfo']
-          print %Q(<listinfo line="#{no}")
-          print %Q( begin="1") if no == 1
-          print %Q( end="#{no}") if no == lines.size
-          print '>'
+          buf << %Q(<listinfo line="#{no}")
+          buf << %Q( begin="1") if no == 1
+          buf << %Q( end="#{no}") if no == lines.size
+          buf << '>'
         end
-        print detab(%Q(<span type='lineno'>) + (i + first_line_num).to_s.rjust(2) + ': </span>' + line)
-        print "\n"
-        print '</listinfo>' if @book.config['listinfo']
+        buf << detab(%Q(<span type='lineno'>) + (i + first_line_num).to_s.rjust(2) + ': </span>' + line)
+        buf << "\n"
+        buf << '</listinfo>' if @book.config['listinfo']
         no += 1
       end
-      puts '</pre></codelist>'
+      buf << '</pre></codelist>'
+      buf
     end
 
     def cmd(lines, caption = nil)
@@ -336,29 +364,31 @@ module ReVIEW
     end
 
     def quotedlist(lines, css_class, caption)
-      print %Q(<list type='#{css_class}'>)
-      puts "<caption aid:pstyle='#{css_class}-title'>#{compile_inline(caption)}</caption>" if caption.present?
-      print '<pre>'
+      buf = ''
+      buf << %Q(<list type='#{css_class}'>)
+      buf << "<caption aid:pstyle='#{css_class}-title'>#{caption}</caption>" if caption.present?
+      buf << '<pre>'
       no = 1
       lines.each do |line|
         if @book.config['listinfo']
-          print %Q(<listinfo line="#{no}")
-          print %Q( begin="1") if no == 1
-          print %Q( end="#{no}") if no == lines.size
-          print '>'
+          buf << %Q(<listinfo line="#{no}")
+          buf << %Q( begin="1") if no == 1
+          buf << %Q( end="#{no}") if no == lines.size
+          buf << '>'
         end
-        print detab(line)
-        print "\n"
-        print '</listinfo>' if @book.config['listinfo']
+        buf << detab(line)
+        buf << "\n"
+        buf << '</listinfo>' if @book.config['listinfo']
         no += 1
       end
-      puts '</pre></list>'
+      buf << '</pre></list>'
+      buf
     end
     private :quotedlist
 
     def quote(lines)
       blocked_lines = split_paragraph(lines)
-      puts "<quote>#{blocked_lines.join}</quote>"
+      "<quote>#{blocked_lines.join}</quote>"
     end
 
     def inline_table(id)
@@ -394,62 +424,71 @@ module ReVIEW
     end
 
     def image_image(id, caption, metric = nil)
+      buf = ''
       metrics = parse_metric('idgxml', metric)
-      puts '<img>'
-      puts %Q(<Image href="file://#{@chapter.image(id).path.sub(%r{\A./}, '')}"#{metrics} />)
-      image_header id, caption
-      puts '</img>'
+      buf << '<img>'
+      buf << %Q(<Image href="file://#{@chapter.image(id).path.sub(%r{\A./}, '')}"#{metrics} />)
+      buf << image_header(id, caption)
+      buf << '</img>'
+      buf
     end
 
     def image_dummy(id, caption, lines)
-      puts '<img>'
-      print %Q(<pre aid:pstyle="dummyimage">)
+      buf = ''
+      buf << '<img>'
+      buf << %Q(<pre aid:pstyle="dummyimage">)
       lines.each do |line|
-        print detab(line)
-        print "\n"
+        buf << detab(line)
+        buf << "\n"
       end
-      print '</pre>'
-      image_header id, caption
-      puts '</img>'
+      buf << '</pre>'
+      buf << image_header(id, caption)
+      buf << '</img>'
       warn "image not bound: #{id}"
+      buf
     end
 
     def image_header(id, caption)
-      return true unless caption.present?
+      buf = ''
+      return buf unless caption.present?
       if get_chap.nil?
-        puts %Q(<caption>#{I18n.t('image')}#{I18n.t('format_number_without_chapter', [@chapter.image(id).number])}#{I18n.t('caption_prefix_idgxml')}#{compile_inline(caption)}</caption>)
+        buf << %Q(<caption>#{I18n.t('image')}#{I18n.t('format_number_without_chapter', [@chapter.image(id).number])}#{I18n.t('caption_prefix_idgxml')}#{caption}</caption>)
       else
-        puts %Q(<caption>#{I18n.t('image')}#{I18n.t('format_number', [get_chap, @chapter.image(id).number])}#{I18n.t('caption_prefix_idgxml')}#{compile_inline(caption)}</caption>)
+        buf << %Q(<caption>#{I18n.t('image')}#{I18n.t('format_number', [get_chap, @chapter.image(id).number])}#{I18n.t('caption_prefix_idgxml')}#{caption}</caption>)
       end
+      buf
     end
 
     def texequation(lines, id = nil, caption = '')
+      buf = ''
       @texblockequation += 1
       if id
-        puts '<equationblock>'
+        buf << '<equationblock>'
         if get_chap.nil?
-          puts %Q(<caption>#{I18n.t('equation')}#{I18n.t('format_number_without_chapter', [@chapter.equation(id).number])}#{I18n.t('caption_prefix_idgxml')}#{compile_inline(caption)}</caption>)
+          buf << %Q(<caption>#{I18n.t('equation')}#{I18n.t('format_number_without_chapter', [@chapter.equation(id).number])}#{I18n.t('caption_prefix_idgxml')}#{caption}</caption>)
         else
-          puts %Q(<caption>#{I18n.t('equation')}#{I18n.t('format_number', [get_chap, @chapter.equation(id).number])}#{I18n.t('caption_prefix_idgxml')}#{compile_inline(caption)}</caption>)
+          buf << %Q(<caption>#{I18n.t('equation')}#{I18n.t('format_number', [get_chap, @chapter.equation(id).number])}#{I18n.t('caption_prefix_idgxml')}#{caption}</caption>)
         end
       end
 
-      puts %Q(<replace idref="texblock-#{@texblockequation}">)
-      puts '<pre>'
-      puts lines.join("\n")
-      puts '</pre>'
-      puts '</replace>'
+      buf << %Q(<replace idref="texblock-#{@texblockequation}">)
+      buf << '<pre>'
+      buf << lines.join("\n")
+      buf << '</pre>'
+      buf << '</replace>'
 
       if id
-        puts '</equationblock>'
+        buf << '</equationblock>'
       end
+      buf
     end
 
     def table(lines, id = nil, caption = nil)
+      buf = ''
       tablewidth = @book.config['tableopt'] ? @book.config['tableopt'].split(',')[0].to_f / @book.config['pt_to_mm_unit'].to_f : nil
       col = 0
 
-      puts '<table>'
+      buf << '<table>'
       rows = []
       sepidx = nil
       lines.each_with_index do |line, idx|
@@ -487,68 +526,74 @@ module ReVIEW
       end
 
       begin
-        table_header id, caption if caption.present?
+        buf << table_header(id, caption) if caption.present?
       rescue KeyError
         error "no such table: #{id}"
       end
       return if rows.empty?
 
       if tablewidth.nil?
-        print '<tbody>'
+        buf << '<tbody>'
       else
-        print %Q(<tbody xmlns:aid5="http://ns.adobe.com/AdobeInDesign/5.0/" aid:table="table" aid:trows="#{rows.length}" aid:tcols="#{col}">)
+        buf << %Q(<tbody xmlns:aid5="http://ns.adobe.com/AdobeInDesign/5.0/" aid:table="table" aid:trows="#{rows.length}" aid:tcols="#{col}">)
       end
 
       if sepidx
         sepidx.times do |y|
           if tablewidth.nil?
-            puts %Q(<tr type="header">#{rows.shift}</tr>)
+            buf << %Q(<tr type="header">#{rows.shift}</tr>)
           else
             i = 0
             rows.shift.split("\t").each_with_index do |cell, x|
-              print %Q(<td xyh="#{x + 1},#{y + 1},#{sepidx}" aid:table="cell" aid:theader="1" aid:crows="1" aid:ccols="1" aid:ccolwidth="#{sprintf('%.3f', cellwidth[i])}">#{cell.sub('DUMMYCELLSPLITTER', '')}</td>)
+              buf << %Q(<td xyh="#{x + 1},#{y + 1},#{sepidx}" aid:table="cell" aid:theader="1" aid:crows="1" aid:ccols="1" aid:ccolwidth="#{sprintf('%.3f', cellwidth[i])}">#{cell.sub('DUMMYCELLSPLITTER', '')}</td>)
               i += 1
             end
           end
         end
       end
-      trputs(tablewidth, rows, cellwidth, sepidx)
-      puts '</tbody></table>'
+      buf << trputs(tablewidth, rows, cellwidth, sepidx)
+      buf << '</tbody></table>'
       @tsize = nil
+      buf
     end
 
     def trputs(tablewidth, rows, cellwidth, sepidx)
+      buf = ''
       sepidx = 0 if sepidx.nil?
       if tablewidth
         rows.each_with_index do |row, y|
           i = 0
           row.split("\t").each_with_index do |cell, x|
-            print %Q(<td xyh="#{x + 1},#{y + 1 + sepidx},#{sepidx}" aid:table="cell" aid:crows="1" aid:ccols="1" aid:ccolwidth="#{sprintf('%.3f', cellwidth[i])}">#{cell.sub('DUMMYCELLSPLITTER', '')}</td>)
+            buf << %Q(<td xyh="#{x + 1},#{y + 1 + sepidx},#{sepidx}" aid:table="cell" aid:crows="1" aid:ccols="1" aid:ccolwidth="#{sprintf('%.3f', cellwidth[i])}">#{cell.sub('DUMMYCELLSPLITTER', '')}</td>)
             i += 1
           end
         end
       else
         lastline = rows.pop
-        rows.each { |row| puts "<tr>#{row}</tr>" }
-        puts %Q(<tr type="lastline">#{lastline}</tr>) if lastline
+        rows.each { |row| buf << "<tr>#{row}</tr>" }
+        buf << %Q(<tr type="lastline">#{lastline}</tr>) if lastline
       end
+      buf
     end
 
     def table_header(id, caption)
+      buf = ''
       if id.nil?
-        puts %Q(<caption>#{compile_inline(caption)}</caption>)
+        buf << %Q(<caption>#{caption}</caption>)
       elsif get_chap
-        puts %Q(<caption>#{I18n.t('table')}#{I18n.t('format_number', [get_chap, @chapter.table(id).number])}#{I18n.t('caption_prefix_idgxml')}#{compile_inline(caption)}</caption>)
+        buf << %Q(<caption>#{I18n.t('table')}#{I18n.t('format_number', [get_chap, @chapter.table(id).number])}#{I18n.t('caption_prefix_idgxml')}#{caption}</caption>)
       else
-        puts %Q(<caption>#{I18n.t('table')}#{I18n.t('format_number_without_chapter', [@chapter.table(id).number])}#{I18n.t('caption_prefix_idgxml')}#{compile_inline(caption)}</caption>)
+        buf << %Q(<caption>#{I18n.t('table')}#{I18n.t('format_number_without_chapter', [@chapter.table(id).number])}#{I18n.t('caption_prefix_idgxml')}#{caption}</caption>)
       end
+      buf
     end
 
     def table_begin(ncols)
+      ''
     end
 
     def tr(rows)
-      puts %Q(<tr>#{rows.join("\t")}</tr>)
+      %Q(<tr>#{rows.join("\t")}</tr>)
     end
 
     def th(str)
@@ -560,7 +605,9 @@ module ReVIEW
     end
 
     def table_end
-      print '<?dtp tablerow last?>'
+      buf = ''
+      buf << '<?dtp tablerow last?>'
+      buf
     end
 
     def emtable(lines, caption = nil)
@@ -568,36 +615,43 @@ module ReVIEW
     end
 
     def imgtable(lines, id, caption = nil, metric = nil)
+      buf = ''
       if @chapter.image(id).bound?
         metrics = parse_metric('idgxml', metric)
-        puts '<table>'
-        table_header id, caption if caption.present?
-        puts %Q(<imgtable><Image href="file://#{@chapter.image(id).path.sub(%r{\A./}, '')}"#{metrics} /></imgtable>)
-        puts '</table>'
+        buf << '<table>'
+        buf << table_header(id, caption) if caption.present?
+        buf << %Q(<imgtable><Image href="file://#{@chapter.image(id).path.sub(%r{\A./}, '')}"#{metrics} /></imgtable>)
+        buf << '</table>'
       else
         warn "image not bound: #{id}" if @strict
-        image_dummy id, caption, lines
+        buf << image_dummy(id, caption, lines)
       end
+      buf
     end
 
     def comment(lines, comment = nil)
-      return unless @book.config['draft']
+      buf = ''
+      return '' unless @book.config['draft']
       lines ||= []
-      lines.unshift escape(comment) unless comment.blank?
+      lines.unshift comment unless comment.blank?
       str = lines.join("\n")
-      print "<msg>#{str}</msg>"
+      buf << "<msg>#{str}</msg>"
+      buf
     end
 
     def inline_comment(str)
+      buf = ''
       if @book.config['draft']
-        %Q(<msg>#{escape(str)}</msg>)
+        buf << %Q(<msg>#{escape(str)}</msg>)
       else
-        ''
+        buf << ''
       end
+      buf
     end
 
     def footnote(id, str)
       # see inline_fn
+      ''
     end
 
     def inline_fn(id)
@@ -748,53 +802,62 @@ module ReVIEW
     end
 
     def noindent
+      buf = ''
       @noindent = true
+      buf
     end
 
     def blankline
-      puts '<p/>'
+      '<p/>'
     end
 
     def pagebreak
-      puts '<pagebreak />'
+      '<pagebreak />'
     end
 
     def nonum_begin(level, _label, caption)
-      puts %Q(<title aid:pstyle="h#{level}">#{compile_inline(caption)}</title><?dtp level="#{level}" section="#{escape(compile_inline(caption))}"?>)
+      %Q(<title aid:pstyle="h#{level}">#{caption}</title><?dtp level="#{level}" section="#{escape(caption)}"?>)
     end
 
     def nonum_end(level)
+      ''
     end
 
     def notoc_begin(level, _label, caption)
-      puts %Q(<title aid:pstyle="h#{level}">#{compile_inline(caption)}</title>)
+      %Q(<title aid:pstyle="h#{level}">#{caption}</title>)
     end
 
     def notoc_end(level)
+      ''
     end
 
     def nodisp_begin(level, label, caption)
+      ''
     end
 
     def nodisp_end(level)
+      ''
     end
 
     def circle_begin(_level, _label, caption)
-      puts %Q(<title aid:pstyle="smallcircle">&#x2022;#{compile_inline(caption)}</title>)
+       %Q(<title aid:pstyle="smallcircle">&#x2022;#{caption}</title>)
     end
 
     def circle_end(level)
+      ''
     end
 
     def common_column_begin(type, caption)
+      buf = ''
       @column += 1
       a_id = %Q(id="column-#{@column}")
-      print "<#{type}column #{a_id}>"
-      puts %Q(<title aid:pstyle="#{type}column-title">#{compile_inline(caption)}</title><?dtp level="9" section="#{escape(compile_inline(caption))}"?>)
+      buf << "<#{type}column #{a_id}>"
+      buf << %Q(<title aid:pstyle="#{type}column-title">#{caption}</title><?dtp level="9" section="#{escape(caption)}"?>)
+      buf
     end
 
     def common_column_end(type)
-      puts "</#{type}column>"
+      "</#{type}column>"
     end
 
     def column_begin(_level, _label, caption)
@@ -846,43 +909,49 @@ module ReVIEW
     end
 
     def ref_begin(_level, label, _caption)
+      buf = ''
       if label
-        puts "<reference id='#{label}'>"
+        buf << "<reference id='#{label}'>"
       else
-        puts '<reference>'
+        buf << '<reference>'
       end
+      buf
     end
 
     def ref_end(_level)
-      puts '</reference>'
+      '</reference>'
     end
 
     def sup_begin(_level, label, _caption)
+      buf = ''
       if label
-        puts "<supplement id='#{label}'>"
+        buf << "<supplement id='#{label}'>"
       else
-        puts '<supplement>'
+        buf << '<supplement>'
       end
+      buf
     end
 
     def sup_end(_level)
-      puts '</supplement>'
+      buf << '</supplement>'
     end
 
     def flushright(lines)
-      puts split_paragraph(lines).join.gsub('<p>', %Q(<p align='right'>))
+      split_paragraph(lines).join.gsub('<p>', %Q(<p align='right'>))
     end
 
     def centering(lines)
-      puts split_paragraph(lines).join.gsub('<p>', %Q(<p align='center'>))
+      split_paragraph(lines).join.gsub('<p>', %Q(<p align='center'>))
     end
 
     def captionblock(type, lines, caption, specialstyle = nil)
-      print "<#{type}>"
+      buf = ''
+      buf << "<#{type}>"
       style = specialstyle.nil? ? "#{type}-title" : specialstyle
-      puts "<title aid:pstyle='#{style}'>#{compile_inline(caption)}</title>" if caption.present?
+      buf << "<title aid:pstyle='#{style}'>#{caption}</title>" if caption.present? 
       blocked_lines = split_paragraph(lines)
-      puts "#{blocked_lines.join}</#{type}>"
+      buf << "#{blocked_lines.join}</#{type}>"
+      buf
     end
 
     def note(lines, caption = nil)
@@ -970,6 +1039,7 @@ module ReVIEW
     end
 
     def syntaxblock(type, lines, caption)
+      buf = ''
       if caption.present?
         titleopentag = %Q(caption aid:pstyle="#{type}-title")
         titleclosetag = 'caption'
@@ -977,25 +1047,26 @@ module ReVIEW
           titleopentag = %Q(floattitle type="insn")
           titleclosetag = 'floattitle'
         end
-        puts %Q(<#{type}><#{titleopentag}>#{compile_inline(caption)}</#{titleclosetag}>)
+        buf << %Q(<#{type}><#{titleopentag}>#{caption}</#{titleclosetag}>)
       else
-        puts "<#{type}>"
+        buf << "<#{type}>"
       end
 
       no = 1
       lines.each do |line|
         if @book.config['listinfo']
-          print %Q(<listinfo line="#{no}")
-          print %Q( begin="1") if no == 1
-          print %Q( end="#{no}") if no == lines.size
-          print '>'
+          buf << %Q(<listinfo line="#{no}")
+          buf << %Q( begin="1") if no == 1
+          buf << %Q( end="#{no}") if no == lines.size
+          buf << '>'
         end
-        print detab(line)
-        print "\n"
-        print '</listinfo>' if @book.config['listinfo']
+        buf << detab(line)
+        buf << "\n"
+        buf << '</listinfo>' if @book.config['listinfo']
         no += 1
       end
-      puts "</#{type}>"
+      buf << "</#{type}>"
+      buf
     end
 
     def insn(lines, caption = nil)
@@ -1007,34 +1078,42 @@ module ReVIEW
     end
 
     def indepimage(_lines, id, caption = nil, metric = nil)
+      buf = ''
       metrics = parse_metric('idgxml', metric)
-      puts '<img>'
+      buf << '<img>'
       begin
-        puts %Q(<Image href="file://#{@chapter.image(id).path.sub(%r{\A\./}, '')}"#{metrics} />)
+        buf << %Q(<Image href="file://#{@chapter.image(id).path.sub(%r{\A\./}, '')}"#{metrics} />)
       rescue
         warn %Q(image not bound: #{id})
       end
-      puts %Q(<caption>#{compile_inline(caption)}</caption>) if caption.present?
-      puts '</img>'
+      buf << %Q(<caption>#{caption}</caption>) if caption.present?
+      buf << '</img>'
+      buf
     end
 
     alias_method :numberlessimage, :indepimage
 
     def label(id)
+      buf = ''
       # FIXME
-      print "<label id='#{id}' />"
+      buf << "<label id='#{id}' />"
+      buf
     end
 
     def dtp(str)
-      print %Q(<?dtp #{str} ?>)
+      buf = ''
+      buf << %Q(<?dtp #{str} ?>)
+      buf
     end
 
     def hr
-      print '<hr />'
+      buf = ''
+      buf << '<hr />'
+      buf
     end
 
     def bpo(lines)
-      puts %Q(<bpo>#{lines.join("\n")}</bpo>)
+      %Q(<bpo>#{lines.join("\n")}</bpo>)
     end
 
     def inline_dtp(str)
@@ -1050,12 +1129,14 @@ module ReVIEW
     end
 
     def rawblock(lines)
+      buf = ''
       no = 1
       lines.each do |l|
-        print l.gsub('&lt;', '<').gsub('&gt;', '>').gsub('&quot;', '"').gsub('&amp;', '&')
-        print "\n" unless lines.length == no
+        buf << l.gsub('&lt;', '<').gsub('&gt;', '>').gsub('&quot;', '"').gsub('&amp;', '&')
+        buf << "\n" unless lines.length == no
         no += 1
       end
+      buf
     end
 
     def text(str)
@@ -1114,29 +1195,37 @@ module ReVIEW
     end
 
     def source_header(caption)
-      puts '<source>'
-      puts %Q(<caption>#{compile_inline(caption)}</caption>) if caption.present?
+      buf = ''
+      buf << '<source>'
+      buf << %Q(<caption>#{caption}</caption>) if caption.present?
+      buf
     end
 
     def source_body(lines, _lang)
-      puts '<pre>'
+      buf = ''
+      buf << '<pre>'
       codelines_body(lines)
-      puts '</pre></source>'
+      buf << '</pre></source>'
+      buf
     end
 
     def bibpaper(lines, id, caption)
+      buf = ''
       bibpaper_header id, caption
       bibpaper_bibpaper id, caption, lines unless lines.empty?
-      puts '</bibitem>'
+      buf << '</bibitem>' < "\n"
+      buf
     end
 
     def bibpaper_header(id, caption)
-      puts %Q(<bibitem id="bib-#{id}">)
-      puts "<caption><span type='bibno'>[#{@chapter.bibpaper(id).number}] </span>#{compile_inline(caption)}</caption>" if caption.present?
+      buf = ''
+      buf << %Q(<bibitem id="bib-#{id}">)
+      buf << "<caption><span type='bibno'>[#{@chapter.bibpaper(id).number}] </span>#{caption}</caption>" if caption.present?
+      buf
     end
 
     def bibpaper_bibpaper(_id, _caption, lines)
-      print split_paragraph(lines).join
+      split_paragraph(lines).join
     end
 
     def inline_bib(id)

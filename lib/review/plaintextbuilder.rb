@@ -55,21 +55,14 @@ module ReVIEW
       @ol_num = num.to_i
     end
 
-    def print(s)
+    def reset_blank
       @blank_seen = false
-      super
     end
-    private :print
-
-    def puts(s)
-      @blank_seen = false
-      super
-    end
-    private :puts
 
     def blank
-      @output.puts unless @blank_seen
+      ret = @blank_seen ? '' : "\n"
       @blank_seen = true
+      ret
     end
     private :blank
 
@@ -79,7 +72,8 @@ module ReVIEW
 
     def headline(level, _label, caption)
       prefix, _anchor = headline_prefix(level)
-      puts %Q(#{prefix}#{compile_inline(caption)})
+      reset_blank
+      %Q(#{prefix}#{compile_inline(caption)}) + "\n"
     end
 
     def ul_begin
@@ -87,7 +81,8 @@ module ReVIEW
     end
 
     def ul_item(lines)
-      puts lines.join
+      reset_blank
+      lines.join + "\n"
     end
 
     def ul_end
@@ -95,17 +90,18 @@ module ReVIEW
     end
 
     def ol_begin
-      blank
       @olitem = 0
+      blank
     end
 
     def ol_item(lines, num)
-      puts "#{num}　#{lines.join}"
+      reset_blank
+      "#{num}　#{lines.join}" + "\n"
     end
 
     def ol_end
-      blank
       @olitem = nil
+      blank
     end
 
     def dl_begin
@@ -113,13 +109,17 @@ module ReVIEW
     end
 
     def dt(line)
-      puts line
+      reset_blank
+      line + "\n"
     end
 
     def dd(lines)
+      buf = ''
       split_paragraph(lines).each do |paragraph|
-        puts paragraph.gsub(/\n/, '')
+        reset_blank
+        buf << paragraph.gsub(/\n/, '') << "\n"
       end
+      buf
     end
 
     def dl_end
@@ -127,65 +127,86 @@ module ReVIEW
     end
 
     def paragraph(lines)
-      puts lines.join
+      reset_blank
+      lines.join + "\n"
     end
 
     def read(lines)
-      puts split_paragraph(lines).join("\n")
+      buf = ''
+      reset_blank
+      buf << split_paragraph(lines).join("\n") + "\n"
       blank
     end
 
     alias_method :lead, :read
 
     def list_header(id, caption, _lang)
-      blank
+      buf = ''
+      buf << blank
+      reset_blank
       if get_chap
-        puts %Q(#{I18n.t('list')}#{I18n.t('format_number', [get_chap, @chapter.list(id).number])}#{I18n.t('caption_prefix_idgxml')}#{compile_inline(caption)})
+        buf << %Q(#{I18n.t('list')}#{I18n.t('format_number', [get_chap, @chapter.list(id).number])}#{I18n.t('caption_prefix_idgxml')}#{compile_inline(caption)}) << "\n"
       else
-        puts %Q(#{I18n.t('list')}#{I18n.t('format_number_without_chapter', [@chapter.list(id).number])}#{I18n.t('caption_prefix_idgxml')}#{compile_inline(caption)})
+        buf << %Q(#{I18n.t('list')}#{I18n.t('format_number_without_chapter', [@chapter.list(id).number])}#{I18n.t('caption_prefix_idgxml')}#{compile_inline(caption)}) << "\n"
       end
-      blank
+      buf << blank
+      buf
     end
 
     def list_body(_id, lines, _lang)
+      buf = ''
       lines.each do |line|
-        puts detab(line)
+        reset_blank
+        buf << detab(line) << "\n"
       end
-      blank
+      buf << blank
+      buf
     end
 
     def base_block(_type, lines, caption = nil)
-      blank
-      puts compile_inline(caption) if caption.present?
-      puts lines.join("\n")
-      blank
+      buf = ''
+      buf << blank
+      buf << compile_inline(caption) << "\n" if caption.present?
+      reset_blank
+      buf << lines.join("\n") << "\n"
+      buf << blank
+      buf
     end
 
     def base_parablock(_type, lines, caption = nil)
-      blank
-      puts compile_inline(caption) if caption.present?
-      puts split_paragraph(lines).join("\n")
-      blank
+      buf = ''
+      buf << blank
+      buf << compile_inline(caption) << "\n" if caption.present?
+      buf << split_paragraph(lines).join("\n") << "\n"
+      buf << blank
+      buf
     end
 
     def emlist(lines, caption = nil, _lang = nil)
-      base_block 'emlist', lines, caption
+      base_block('emlist', lines, caption)
     end
 
     def emlistnum(lines, caption = nil, _lang = nil)
-      blank
-      puts compile_inline(caption) if caption.present?
+      buf = ''
+      buf << blank
+      buf << compile_inline(caption) << "\n" if caption.present?
       lines.each_with_index do |line, i|
-        puts((i + 1).to_s.rjust(2) + ": #{line}")
+        reset_blank
+        buf << ((i + 1).to_s.rjust(2) + ": #{line}") + "\n"
       end
-      blank
+      buf << blank
+      buf
     end
 
     def listnum_body(lines, _lang)
+      buf = ''
+      buf << blank
       lines.each_with_index do |line, i|
-        puts((i + 1).to_s.rjust(2) + ": #{line}")
+        reset_blank
+        buf << ((i + 1).to_s.rjust(2) + ": #{line}") << "\n"
       end
-      blank
+      buf << blank
+      buf
     end
 
     def cmd(lines, caption = nil)
@@ -197,31 +218,39 @@ module ReVIEW
     end
 
     def image(_lines, id, caption, _metric = nil)
-      blank
+      buf = ''
+      buf << blank
+      reset_blank
       if get_chap
-        puts "#{I18n.t('image')}#{I18n.t('format_number', [get_chap, @chapter.image(id).number])}#{I18n.t('caption_prefix_idgxml')}#{compile_inline(caption)}"
+        buf << "#{I18n.t('image')}#{I18n.t('format_number', [get_chap, @chapter.image(id).number])}#{I18n.t('caption_prefix_idgxml')}#{compile_inline(caption)}" << "\n"
       else
-        puts "#{I18n.t('image')}#{I18n.t('format_number_without_chapter', [@chapter.image(id).number])}#{I18n.t('caption_prefix_idgxml')}#{compile_inline(caption)}"
+        buf << "#{I18n.t('image')}#{I18n.t('format_number_without_chapter', [@chapter.image(id).number])}#{I18n.t('caption_prefix_idgxml')}#{compile_inline(caption)}" << "\n"
       end
-      blank
+      buf << blank
+      buf
     end
 
     def texequation(lines, id = nil, caption = '')
+      buf = ''
       if id
-        blank
+        buf << blank
+        reset_blank
         if get_chap
-          puts "#{I18n.t('equation')}#{I18n.t('format_number', [get_chap, @chapter.equation(id).number])}#{I18n.t('caption_prefix_idgxml')}#{compile_inline(caption)}"
+          buf << "#{I18n.t('equation')}#{I18n.t('format_number', [get_chap, @chapter.equation(id).number])}#{I18n.t('caption_prefix_idgxml')}#{compile_inline(caption)}" << "\n"
         else
-          puts "#{I18n.t('equation')}#{I18n.t('format_number_without_chapter', [@chapter.equation(id).number])}#{I18n.t('caption_prefix_idgxml')}#{compile_inline(caption)}"
+          buf << "#{I18n.t('equation')}#{I18n.t('format_number_without_chapter', [@chapter.equation(id).number])}#{I18n.t('caption_prefix_idgxml')}#{compile_inline(caption)}" << "\n"
         end
       end
 
-      puts lines.join("\n")
-      blank
+      reset_blank
+      buf << lines.join("\n") << "\n"
+      buf << blank
+      buf
     end
 
     def table(lines, id = nil, caption = nil)
-      blank
+      buf = ''
+      buf << blank
       rows = []
       sepidx = nil
       lines.each_with_index do |line, idx|
@@ -236,50 +265,61 @@ module ReVIEW
       rows = adjust_n_cols(rows)
 
       begin
-        table_header(id, caption) if caption.present?
+        buf << table_header(id, caption) if caption.present?
       rescue KeyError
         error "no such table: #{id}"
       end
       return if rows.empty?
-      table_begin rows.first.size
+      buf << table_begin(rows.first.size)
       if sepidx
         sepidx.times do
-          tr(rows.shift.map { |s| th(s) })
+          buf << tr(rows.shift.map { |s| th(s) })
         end
         rows.each do |cols|
-          tr(cols.map { |s| td(s) })
+          buf << tr(cols.map { |s| td(s) })
         end
       else
         rows.each do |cols|
           h, *cs = *cols
-          tr([th(h)] + cs.map { |s| td(s) })
+          buf << tr([th(h)] + cs.map { |s| td(s) })
         end
       end
-      table_end
+      buf << table_end
+      buf
     end
 
     def table_header(id, caption)
+      buf = ''
+      reset_blank
       if id.nil?
-        puts compile_inline(caption)
+        buf << compile_inline(caption) << "\n"
       elsif get_chap
-        puts "#{I18n.t('table')}#{I18n.t('format_number', [get_chap, @chapter.table(id).number])}#{I18n.t('caption_prefix_idgxml')}#{compile_inline(caption)}"
+        buf << "#{I18n.t('table')}#{I18n.t('format_number', [get_chap, @chapter.table(id).number])}#{I18n.t('caption_prefix_idgxml')}#{compile_inline(caption)}" << "\n"
       else
-        puts "#{I18n.t('table')}#{I18n.t('format_number_without_chapter', [@chapter.table(id).number])}#{I18n.t('caption_prefix_idgxml')}#{compile_inline(caption)}"
+        buf << "#{I18n.t('table')}#{I18n.t('format_number_without_chapter', [@chapter.table(id).number])}#{I18n.t('caption_prefix_idgxml')}#{compile_inline(caption)}" << "\n"
       end
-      blank
+      buf << blank
+      buf
     end
 
     def table_begin(_ncols)
+      ''
     end
 
     def imgtable(_lines, id, caption = nil, _metric = nil)
-      blank
-      table_header(id, caption) if caption.present?
-      blank
+      buf = ''
+      buf << blank
+      if caption.present?
+        reset_blank
+        buf << table_header(id, caption)
+      end
+      buf << blank
+      buf
     end
 
     def tr(rows)
-      puts rows.join("\t")
+      reset_blank
+      rows.join("\t") + "\n"
     end
 
     def table_end
@@ -287,10 +327,11 @@ module ReVIEW
     end
 
     def comment(lines, comment = nil)
+      ''
     end
 
     def footnote(id, str)
-      puts "注#{@chapter.footnote(id).number} #{compile_inline(str)}"
+      buf << "注#{@chapter.footnote(id).number} #{compile_inline(str)}" << "\n"
     end
 
     def inline_fn(id)
@@ -344,17 +385,21 @@ module ReVIEW
     end
 
     def bibpaper(lines, id, caption)
-      bibpaper_header id, caption
-      bibpaper_bibpaper id, caption, lines unless lines.empty?
+      buf = ''
+      buf << bibpaper_header(id, caption)
+      buf << bibpaper_bibpaper(id, caption, lines) unless lines.empty?
+      buf
     end
 
     def bibpaper_header(id, caption)
-      print @chapter.bibpaper(id).number
-      puts " #{compile_inline(caption)}"
+      buf = ''
+      buf << @chapter.bibpaper(id).number
+      buf << " #{compile_inline(caption)}" << "\n"
+      buf
     end
 
     def bibpaper_bibpaper(_id, _caption, lines)
-      print split_paragraph(lines).join
+      split_paragraph(lines).join
     end
 
     def inline_bib(id)
@@ -375,31 +420,38 @@ module ReVIEW
     end
 
     def noindent
+      ''
     end
 
     def nonum_begin(_level, _label, caption)
-      puts compile_inline(caption)
+      compile_inline(caption) + "\n"
     end
 
     def nonum_end(_level)
+      ''
     end
 
     def notoc_begin(_level, _label, caption)
-      puts compile_inline(caption)
+      compile_inline(caption) + "\n"
     end
 
     def notoc_end(level)
+      ''
     end
 
     def nodisp_begin(level, label, caption)
+      ''
     end
 
     def nodisp_end(level)
+      ''
     end
 
     def common_column_begin(_type, caption)
-      blank
-      puts compile_inline(caption)
+      buf = ''
+      buf << blank
+      buf << compile_inline(caption) << "\n"
+      buf
     end
 
     def common_column_end(_type)
@@ -557,9 +609,14 @@ module ReVIEW
     alias_method :box, :insn
 
     def indepimage(_lines, _id, caption = nil, _metric = nil)
-      blank
-      puts "図　#{compile_inline(caption)}" if caption.present?
-      blank
+      buf = ''
+      buf << blank
+      if caption.present?
+        reset_blank
+        buf << "図　#{compile_inline(caption)}" << "\n"
+      end
+      buf << blank
+      buf
     end
 
     alias_method :numberlessimage, :indepimage
@@ -569,6 +626,7 @@ module ReVIEW
     end
 
     def dtp(str)
+      ''
     end
 
     def bpo(lines)
@@ -636,10 +694,11 @@ module ReVIEW
     end
 
     def circle_begin(_level, _label, caption)
-      puts "・#{caption}"
+      "・#{caption}" + "\n"
     end
 
     def circle_end(level)
+      ''
     end
 
     def nofunc_text(str)

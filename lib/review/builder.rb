@@ -589,6 +589,7 @@ EOTGNUPLOT
     end
 
     def ul_item_end
+      ''
     end
 
     def tsize(str)
@@ -601,6 +602,7 @@ EOTGNUPLOT
       else
         @tsize = str
       end
+      ''
     end
 
     def inline_raw(args)
