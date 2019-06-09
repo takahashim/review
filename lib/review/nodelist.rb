@@ -33,6 +33,10 @@ class NodeList
     @content.map{|item| item.to_doc}.join("")
   end
 
+  def to_raw
+    @content.map{|item| item.to_raw}.join("")
+  end
+
   def empty?
     @cotent.empty?
   end
