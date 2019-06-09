@@ -21,7 +21,6 @@ end
 
 def compile_inline(text)
   ast = @builder.compile_inline_to_ast(text)
-  pp [:ast, ast]
   ast.to_doc
 end
 
