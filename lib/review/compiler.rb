@@ -67,8 +67,8 @@ module ReVIEW
             end
           end
         else
-          ## args.map(&:to_doc)
-          args.map(&:to_s)
+          args.map(&:to_doc)
+          ##args.map(&:to_s)
         end
       end
 
@@ -131,24 +131,24 @@ module ReVIEW
 
     defblock :read, 0
     defblock :lead, 0
-    defcodeblock :list, 2..3
-    defcodeblock :emlist, 0..2
-    defcodeblock :cmd, 0..1
-    defcodeblock :table, 0..2
-    defcodeblock :imgtable, 0..2
-    defcodeblock :emtable, 0..1
+    defcodeblock :list, 2..4, false, [:raw, :doc, :raw, :raw]
+    defcodeblock :emlist, 0..2, false, [:doc, :raw]
+    defcodeblock :cmd, 0..1, false, [:doc]
+    defcodeblock :table, 0..2, false, [:raw, :doc]
+    defcodeblock :imgtable, 0..2, false, [:raw, :doc]
+    defcodeblock :emtable, 0..1, false, [:doc]
     defblock :quote, 0
     defblock :image, 2..3, true
-    defcodeblock :source, 0..2
-    defcodeblock :listnum, 2..3
-    defcodeblock :emlistnum, 0..2
+    defcodeblock :source, 0..2, false, [:doc, :raw]
+    defcodeblock :listnum, 2..3, false, [:raw, :doc, :raw]
+    defcodeblock :emlistnum, 0..2, false, [:doc, :raw]
     defblock :bibpaper, 2..3, true
     defblock :doorquote, 1
     defblock :talk, 0
     defcodeblock :texequation, 0..2
     defblock :graph, 1..3
-    defblock :indepimage, 1..3, true
-    defblock :numberlessimage, 1..3, true
+    defblock :indepimage, 1..3, true, [:raw, :doc, :raw]
+    defblock :numberlessimage, 1..3, true, [:raw, :doc, :raw]
 
     defblock :address, 0
     defblock :blockquote, 0
@@ -156,7 +156,7 @@ module ReVIEW
     defblock :flushright, 0
     defblock :centering, 0
     defblock :note, 0..1
-    defblock :memo, 0..1
+    defblock :memo, 0..1, false, [:doc]
     defblock :info, 0..1
     defblock :important, 0..1
     defblock :caution, 0..1
@@ -167,18 +167,18 @@ module ReVIEW
     defblock :comment, 0..1, true
     defblock :embed, 0..1
 
-    defsingle :footnote, 2
+    defsingle :footnote, 2, [:raw, :doc]
     defsingle :noindent, 0
     defsingle :blankline, 0
     defsingle :pagebreak, 0
     defsingle :hr, 0
     defsingle :parasep, 0
-    defsingle :label, 1
-    defsingle :raw, 1
-    defsingle :tsize, 1
-    defsingle :include, 1
-    defsingle :olnum, 1
-    defsingle :firstlinenum, 1
+    defsingle :label, 1, [:raw]
+    defsingle :raw, 1, [:raw]
+    defsingle :tsize, 1, [:raw]
+    defsingle :include, 1, [:raw]
+    defsingle :olnum, 1, [:raw]
+    defsingle :firstlinenum, 1, [:raw]
 
     definline :chapref
     definline :chap
@@ -480,7 +480,7 @@ pp [:ulist, current_ulist]
     end
 
     def compile_ul_elem(content)
-      buf = ""
+      buf = ''
       buf << @strategy.ul_item_begin([])
       content.each do |element|
         buf << element.to_doc
@@ -620,6 +620,7 @@ pp [:tbl_rows, lines, rows]
       name = line.slice(/[a-z]+/).to_sym
       ignore_inline = (name == :embed)
       args = parse_args(line.sub(%r{\A//[a-z]+}, '').rstrip.chomp('{'), name)
+pp [:parsed_args, args]
       @strategy.doc_status[name] = true
       lines = block_open?(line) ? read_block(f, ignore_inline) : nil
       @strategy.doc_status[name] = nil
@@ -708,7 +709,7 @@ pp [:read_block, buf]
       unless lines
         return lines
       end
-      pp [:lines, lines]
+pp [:lines, lines]
       if code_block
         return NodeList.new(text(lines))
       end
@@ -725,7 +726,7 @@ pp [:read_block, buf]
       unless buf.empty?
         list << text(buf.join)
       end
-      pp [:parse_block_content, list]
+pp [:parse_block_content, list]
       list
     end
 
@@ -757,7 +758,9 @@ pp [:compile_block, lines]
       if @strategy.respond_to?(node_name)
         @strategy.__send__(node_name, node)
       else
-        args_conv = syntax.compile_args(args)
+        p_args = args.map{|arg| text(arg)}
+        args_conv = syntax.compile_args(p_args)
+pp [:args_conv, args_conv]
         @strategy.__send__(syntax.name, (lines || default_block(syntax)), *args_conv)
       end
     end
@@ -774,7 +777,8 @@ pp [:compile_block, lines]
       if @strategy.respond_to?(node_name)
         @strategy.__send__(node_name, node)
       else
-        args_conv = syntax.compile_args(args)
+        p_args = args.map{|arg| text(arg)}
+        args_conv = syntax.compile_args(p_args)
         @strategy.__send__(syntax.name, *args_conv)
       end
     end
