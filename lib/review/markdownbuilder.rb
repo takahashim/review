@@ -95,26 +95,35 @@ module ReVIEW
     end
 
     def ul_begin
+      ##STDERR.puts "!!!!ul_begin"
       buf = ''
-      if @ul_indent == 0
-        buf << blank
-      end
       @ul_indent += 1
       buf
     end
 
     def ul_item_begin(lines)
+      buf = ''
+      buf << blank
+      ##STDERR.puts "!!!!ul_item_begin(#{lines.join})"
       reset_blank
-      '  ' * (@ul_indent - 1) + '* ' + lines.join + "\n"
+      buf << '  ' * (@ul_indent - 1) + '* ' + lines.join
+      buf
     end
 
     def ul_item_end
+      ##STDERR.puts "!!!!ul_item_end"
+      reset_blank
       ''
     end
 
     def ul_end
+      ##STDERR.puts "!!!!ul_end"
       buf = ''
       @ul_indent -= 1
+      if @ul_indent == 0
+        buf << blank
+      end
+      reset_blank
       if @ul_indent == 0
         buf << blank
       end
