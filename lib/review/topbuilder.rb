@@ -61,32 +61,35 @@ module ReVIEW
 
     def headline(level, _label, caption)
       prefix, _anchor = headline_prefix(level)
-      puts %Q(■H#{level}■#{prefix}#{compile_inline(caption)})
+      %Q(■H#{level}■#{prefix}#{compile_inline(caption)}) + "\n"
     end
 
     def ul_item(lines)
-      puts "●\t#{lines.join}"
+      "●\t#{lines.join}" + "\n"
     end
 
     def ol_item(lines, num)
-      puts "#{num}\t#{lines.join}"
+      "#{num}\t#{lines.join}" + "\n"
     end
 
     def dt(line)
-      puts "★#{line}☆"
+      "★#{line}☆" + "\n"
     end
 
     def dd(lines)
       split_paragraph(lines).each do |paragraph|
-        puts "\t#{paragraph.gsub(/\n/, '')}"
+        "\t#{paragraph.gsub(/\n/, '')}" + "\n"
       end
     end
 
     def read(lines)
-      puts "◆→開始:#{@titles['lead']}←◆"
-      puts split_paragraph(lines).join("\n")
-      puts "◆→終了:#{@titles['lead']}←◆"
-      blank
+      buf = ''
+      reset_blank
+      buf << "◆→開始:#{@titles['lead']}←◆" << "\n"
+      buf << split_paragraph(lines).join("\n") << "\n"
+      buf << "◆→終了:#{@titles['lead']}←◆" << "\n"
+      buf << blank
+      buf
     end
 
     alias_method :lead, :read
