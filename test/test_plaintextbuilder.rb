@@ -148,7 +148,7 @@ class PLAINTEXTBuidlerTest < Test::Unit::TestCase
 
   def test_dlist_beforeulol
     actual = compile_block(" : foo\n  foo.\n\npara\n\n : foo\n  foo.\n\n 1. bar\n\n : foo\n  foo.\n\n * bar\n")
-    assert_equal %Q(foo\nfoo.\n\npara\n\nfoo\nfoo.\n\n1　bar\n\nfoo\nfoo.\n\nbar\n\n), actual
+    assert_equal %Q(foo\nfoo.\n\npara\n\nfoo\nfoo.\n\n1　bar\n\nfoo\nfoo.\n\n\nbar\n), actual
   end
 
   def test_paragraph
