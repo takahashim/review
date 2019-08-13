@@ -1,7 +1,7 @@
 require 'test_helper'
 require 'review/compiler'
 require 'review/book'
-require 'review/topbuilder'
+require 'review/rstbuilder'
 require 'review/i18n'
 
 class RSTBuidlerTest < Test::Unit::TestCase
@@ -195,12 +195,12 @@ class RSTBuidlerTest < Test::Unit::TestCase
       Book::ListIndex::Item.new('test', 1)
     end
     actual = compile_block("//listnum[test][this is @<b>{test}<&>_]{\nfoo\nbar\n//}\n")
-    assert_equal %Q(.. _test:\n\n1\n2\n\n), actual
+    assert_equal %Q(.. _test:\n\n 1: foo\n 2: bar\n\n), actual
   end
 
   def test_emlistnum
     actual = compile_block("//emlistnum[this is @<b>{test}<&>_]{\nfoo\nbar\n//}\n")
-    assert_equal %Q(this is @<b>{test}<&>_\n\n.. code-block:: none\n   :linenos:\n\n   foo\n   bar\n\n), actual
+    assert_equal %Q(this is  **test** <&>_\n\n.. code-block:: none\n   :linenos:\n\n   foo\n   bar\n\n), actual
   end
 
   def test_major_blocks

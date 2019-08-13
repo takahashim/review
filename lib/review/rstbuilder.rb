@@ -73,6 +73,10 @@ module ReVIEW
     end
     private :print
 
+    def reset_blank
+      @blank_seen = false
+    end
+
     def puts(s)
       @blank_seen = false
       super
@@ -80,8 +84,9 @@ module ReVIEW
     private :puts
 
     def blank
-      @output.puts unless @blank_seen
+      ret = @blank_seen ? '' : "\n"
       @blank_seen = true
+      ret
     end
     private :blank
 
@@ -90,19 +95,18 @@ module ReVIEW
     end
 
     def headline(level, label, caption)
-      blank
+      buf = ''
+      buf << blank
       if label
-        puts ".. _#{label}:"
-        blank
+        buf << ".. _#{label}:\n\n"
       end
       p = '='
       case level
       when 1 then
         unless label
-          puts ".. _#{@chapter.name}:"
-          blank
+          buf << ".. _#{@chapter.name}:\n\n"
         end
-        puts '=' * caption.size * 2
+        buf << '=' * caption.size * 2 + "\n"
       when 2 then
         p = '='
       when 3 then
@@ -113,18 +117,20 @@ module ReVIEW
         p = '~'
       end
 
-      puts caption
-      puts p * caption.size * 2
-      blank
+      buf << caption + "\n"
+      buf << p * caption.size * 2 + "\n\n"
+      buf
     end
 
     def ul_begin
-      blank
+      buf = ''
+      buf << blank
       @ul_indent += 1
+      buf
     end
 
     def ul_item(lines)
-      puts '  ' * (@ul_indent - 1) + "* #{lines.join}"
+      '  ' * (@ul_indent - 1) + "* #{lines.join}" + "\n"
     end
 
     def ul_end
@@ -133,12 +139,12 @@ module ReVIEW
     end
 
     def ol_begin
-      blank
       @ol_indent += 1
+      blank
     end
 
     def ol_item(lines, _num)
-      puts '  ' * (@ol_indent - 1) + "#. #{lines.join}"
+      '  ' * (@ol_indent - 1) + "#. #{lines.join}\n"
     end
 
     def ol_end
@@ -147,39 +153,43 @@ module ReVIEW
     end
 
     def dl_begin
+      ''
     end
 
     def dt(line)
-      puts line
+      line + "\n"
     end
 
     def dd(lines)
       split_paragraph(lines).each do |paragraph|
-        puts "  #{paragraph.gsub(/\n/, '')}"
+        "  #{paragraph.gsub(/\n/, '')}\n"
       end
     end
 
     def dl_end
+      ''
     end
 
     def paragraph(lines)
+      buf = ''
       pre = ''
       if @in_role
         pre = '   '
       end
-      puts pre + lines.join
-      puts "\n"
+      buf << pre + lines.join + "\n\n"
+      buf
     end
 
     def read(lines)
-      puts split_paragraph(lines).map { |line| "  #{line}" }.join
-      blank
+      buf << split_paragraph(lines).map { |line| "  #{line}" }.join + "\n"
+      buf << blank
+      buf
     end
 
     alias_method :lead, :read
 
     def hr
-      puts '----'
+      "----\n"
     end
 
     def inline_list(id)
@@ -187,80 +197,93 @@ module ReVIEW
     end
 
     def list_header(id, _caption, _lang)
-      puts ".. _#{id}:"
-      blank
+      buf = ''
+      buf << ".. _#{id}:\n\n"
+      buf
     end
 
     def list_body(_id, lines, _lang)
+      buf = ''
       lines.each do |line|
-        puts '-' + detab(line)
+        buf << '-' + detab(line) + "\n"
       end
+      buf
     end
 
     def base_block(_type, lines, caption = nil)
-      blank
-      puts compile_inline(caption) unless caption.nil?
-      puts lines.join("\n")
-      blank
+      buf = ''
+      buf << blank
+      buf << compile_inline(caption) + "\n" unless caption.nil?
+      buf << lines.join("\n") + "\n"
+      buf << blank
+      buf
     end
 
     def base_parablock(type, lines, caption = nil)
-      puts ".. #{type}::"
-      blank
-      puts "   #{compile_inline(caption)}" unless caption.nil?
-      puts '   ' + split_paragraph(lines).join("\n")
-      blank
+      buf = ''
+      buf << ".. #{type}::\n\n"
+      buf << "   #{compile_inline(caption)}\n" unless caption.nil?
+      buf << '   ' + split_paragraph(lines).join + "\n"
+      buf
     end
 
     def emlist(lines, caption = nil, lang = nil)
-      blank
+      buf = ''
+      buf << blank
       if caption
-        puts caption
-        print "\n"
+        buf << caption + "\n\n"
       end
       lang ||= 'none'
-      puts ".. code-block:: #{lang}"
-      blank
+      buf << ".. code-block:: #{lang}\n\n"
       lines.each do |line|
-        puts '   ' + detab(line)
+        buf << '   ' + detab(line) + "\n"
       end
-      blank
+      buf << blank
+      buf
     end
 
     def emlistnum(lines, caption = nil, lang = nil)
-      blank
+      buf = ''
+      buf << blank
       if caption
-        puts caption
-        print "\n"
+        buf << caption + "\n\n"
       end
       lang ||= 'none'
-      puts ".. code-block:: #{lang}"
-      puts '   :linenos:'
-      blank
+      buf << ".. code-block:: #{lang}\n"
+      buf << '   :linenos:' + "\n\n"
       lines.each do |line|
-        puts '   ' + detab(line)
+        buf << '   ' + detab(line) + "\n"
       end
-      blank
+      reset_blank
+      buf << blank
+      buf
     end
 
     def listnum_body(lines, _lang)
+      buf = ''
       lines.each_with_index do |line, i|
-        puts(i + 1).to_s.rjust(2) + ": #{line}"
+        buf << (i + 1).to_s.rjust(2) + ": #{line}\n"
       end
-      blank
+      reset_blank
+      buf << blank
+      buf
     end
 
     def cmd(lines, _caption = nil)
-      puts '.. code-block:: bash'
+      buf = ''
+      buf << '.. code-block:: bash' + "\n"
       lines.each do |line|
-        puts '   ' + detab(line)
+        buf << '   ' + detab(line) + "\n"
       end
+      buf
     end
 
     def quote(lines)
-      blank
-      puts lines.map { |line| "  #{line}" }.join
-      blank
+      buf = ''
+      buf << blank
+      buf << lines.map { |line| "  #{line}" }.join + "\n"
+      buf << blank
+      buf
     end
 
     def inline_table(id)
@@ -277,65 +300,67 @@ module ReVIEW
         scale = metric.split('=')[1].to_f * 100
       end
 
-      puts ".. _#{id}:"
-      blank
-      puts ".. figure:: images/#{chapter.name}/#{id}.#{image_ext}"
-      puts "   :scale:#{scale}%" if scale
-      blank
-      puts "   #{caption}"
-      blank
+      buf = ''
+      buf << ".. _#{id}:\n\n"
+      buf << ".. figure:: images/#{chapter.name}/#{id}.#{image_ext}\n"
+      buf << "   :scale:#{scale}%\n" if scale
+      buf << "\n"
+      buf << "   #{caption}\n\n"
+      buf
     end
 
     def image_dummy(id, caption, lines)
+      buf = ''
       chapter, id = extract_chapter_id(id)
-      puts ".. _#{id}:"
-      blank
-      puts ".. figure:: images/#{chapter.name}/#{id}.#{image_ext}"
-      blank
-      puts "   #{caption}"
-      puts "   #{lines.join}"
-      blank
+      buf << ".. _#{id}:\n\n"
+      buf << ".. figure:: images/#{chapter.name}/#{id}.#{image_ext}\n"
+      buf << "   #{caption}\n"
+      buf << "   #{lines.join}\n"
+      buf
     end
 
     def texequation(lines, id = nil, caption = '')
+      buf = ''
       if id
-        puts ".. _#{id}:"
+        buf << ".. _#{id}:\n"
       end
 
-      puts '.. math::'
-      blank
-      puts lines.map { |line| "   #{line}" }.join
-      blank
+      buf << ".. math::\n\n"
+      buf << lines.map { |line| "   #{line}" }.join + "\n\n"
       if caption.present?
-        puts "   #{caption}"
-        blank
+        buf << "   #{caption}\n\n"
       end
+      buf
     end
 
     def table_header(id, caption)
+      buf = ''
       unless id.nil?
-        blank
-        puts ".. _#{id}:"
+        buf << blank
+        buf << ".. _#{id}:\n"
       end
-      blank
-      puts ".. list-table:: #{compile_inline(caption)}"
-      puts '   :header-rows: 1'
-      blank
+      buf << blank
+      buf << ".. list-table:: #{compile_inline(caption)}\n"
+      buf << '   :header-rows: 1' + "\n\n"
+      buf
     end
 
     def table_begin(ncols)
+      ''
     end
 
     def tr(rows)
+      buf = ''
       first = true
       rows.each do |row|
         if first
-          puts "   * - #{row}"
+          buf << "   * - #{row}\n"
           first = false
         else
-          puts "     - #{row}"
+          buf << "     - #{row}\n"
         end
       end
+      buf
     end
 
     def th(str)
@@ -347,6 +372,7 @@ module ReVIEW
     end
 
     def table_end
+      reset_blank
       blank
     end
 
@@ -355,12 +381,11 @@ module ReVIEW
     end
 
     def comment(lines, _comment = nil)
-      puts lines.map { |line| "  .. #{line}" }.join
+      lines.map { |line| "  .. #{line}" }.join + "\n"
     end
 
     def footnote(id, str)
-      puts ".. [##{id.sub(' ', '_')}] #{compile_inline(str)}"
-      blank
+      ".. [##{id.sub(' ', '_')}] #{compile_inline(str)}\n"
     end
 
     def inline_fn(id)
@@ -373,8 +398,9 @@ module ReVIEW
 
     def compile_kw(word, alt)
       if alt
-        then " **#{word}（#{alt.strip}）** "
-      else " **#{word}** "
+        " **#{word}（#{alt.strip}）** "
+      else
+        " **#{word}** "
       end
     end
 
@@ -488,26 +514,30 @@ module ReVIEW
 
     def noindent
       # TODO
+      ''
     end
 
     def nonum_begin(_level, _label, caption)
-      puts ".. rubric: #{compile_inline(caption)}"
-      blank
+      buf << ''
+      buf << ".. rubric: #{compile_inline(caption)}\n\n"
+      buf
     end
 
     def nonum_end(level)
+      ''
     end
 
     def common_column_begin(_type, caption)
-      blank
-      puts ".. column:: #{compile_inline(caption)}"
-      blank
+      buf = ''
+      buf << blank
+      buf << ".. column:: #{compile_inline(caption)}\n\n"
       @in_role = true
+      buf
     end
 
     def common_column_end(_type)
       @in_role = false
-      blank
+      "\n"
     end
 
     def column_begin(_level, _label, caption)
@@ -662,19 +692,19 @@ module ReVIEW
 
     def indepimage(_lines, id, caption = '', _metric = nil)
       chapter, id = extract_chapter_id(id)
-      puts ".. _#{id}:"
-      blank
-      puts ".. figure:: images/#{chapter.name}/#{id}.#{image_ext}"
-      blank
-      puts "   #{compile_inline(caption)}"
-      blank
+      buf = ''
+      buf << ".. _#{id}:\n\n"
+      buf << ".. figure:: images/#{chapter.name}/#{id}.#{image_ext}\n\n"
+      buf << "   #{compile_inline(caption)}\n\n"
+      buf
     end
 
     alias_method :numberlessimage, :indepimage
 
     def label(id)
-      puts ".. _#{id}:"
-      blank
+      buf = ''
+      buf << ".. _#{id}:\n"
+      buf
     end
 
     def dtp(str)
@@ -723,6 +753,7 @@ module ReVIEW
     end
 
     def inline_labelref(idref)
+      ''
     end
 
     alias_method :inline_ref, :inline_labelref
@@ -736,6 +767,7 @@ module ReVIEW
     end
 
     def circle_end(level)
+      ''
     end
 
     def nofunc_text(str)
@@ -748,10 +780,11 @@ module ReVIEW
     private :bib_label
 
     def bibpaper_header(id, caption)
+      ''
     end
 
     def bibpaper_bibpaper(id, caption, lines)
-      puts ".. [#{id}] #{compile_inline(caption)} #{split_paragraph(lines).join}"
+      ".. [#{id}] #{compile_inline(caption)} #{split_paragraph(lines).join}\n"
     end
 
     def inline_warn(str)
