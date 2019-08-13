@@ -1,5 +1,6 @@
 require 'test_helper'
 require 'review/textutils'
+require 'review'
 
 class TextUtilsTest < Test::Unit::TestCase
   include ReVIEW::TextUtils
@@ -15,6 +16,11 @@ class TextUtilsTest < Test::Unit::TestCase
       nil
     end
 
+    def @tu_nil.compiler
+      @builder = ReVIEW::PLAINTEXTBuilder.new
+      @compiler = ReVIEW::Compiler.new(@builder)
+    end
+
     @tu_p = Object.new
     @tu_p.extend ReVIEW::TextUtils
     def @tu_p.pre_paragraph
@@ -23,6 +29,11 @@ class TextUtilsTest < Test::Unit::TestCase
 
     def @tu_p.post_paragraph
       '</p>'
+    end
+
+    def @tu_p.compiler
+      @builder = ReVIEW::HTMLBuilder.new
+      @compiler = ReVIEW::Compiler.new(@builder)
     end
   end
 
@@ -47,7 +58,7 @@ class TextUtilsTest < Test::Unit::TestCase
 
   def test_split_paragraph_empty_p
     ret = @tu_p.split_paragraph([])
-    assert_equal ret, ['<p></p>']
+    assert_equal ret, []
   end
 
   def test_split_paragraph_p
