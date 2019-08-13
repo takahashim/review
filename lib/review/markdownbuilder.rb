@@ -179,7 +179,7 @@ module ReVIEW
       buf << %Q(<div class="#{type}">\n)
       buf << %Q(<p class="caption">#{caption}</p>\n) if caption.present?
       blocked_lines = split_paragraph(lines)
-      buf << blocked_lines.join("\n") + "\n"
+      buf << blocked_lines.join("\n").chomp + "\n"
       buf << "</div>\n"
       reset_blank
       buf

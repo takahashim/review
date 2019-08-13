@@ -28,7 +28,7 @@ class MARKDOWNBuilderTest < Test::Unit::TestCase
 
   def test_memo
     actual = compile_block("//memo[this is @<b>{test}<&>_]{\ntest1\n\ntest@<i>{2}\n//}\n")
-    assert_equal %Q(<div class="memo">\n<p class="caption">this is **test**<&>_</p>\ntest1\ntest*2*\n</div>\n), actual
+    assert_equal %Q(<div class="memo">\n<p class="caption">this is **test**<&>_</p>\ntest1\n\ntest*2*\n</div>\n), actual
   end
 
   def test_noindent
