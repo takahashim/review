@@ -1,6 +1,6 @@
 require 'test_helper'
 require 'book_test_helper'
-require 'review/converter'
+require 'review'
 
 class ConverterTest < Test::Unit::TestCase
   include BookTestHelper

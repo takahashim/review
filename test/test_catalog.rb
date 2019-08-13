@@ -1,5 +1,6 @@
 require 'test_helper'
 require 'review/catalog'
+require 'book_test_helper'
 
 class CatalogTest < Test::Unit::TestCase
   include ReVIEW
