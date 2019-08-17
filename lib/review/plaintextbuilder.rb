@@ -82,7 +82,7 @@ module ReVIEW
 
     def ul_item(lines)
       reset_blank
-      lines.join + "\n"
+      lines.join
     end
 
     def ul_end
