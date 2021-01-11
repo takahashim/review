@@ -10,13 +10,12 @@ jobs:
       fail-fast: false
       matrix:
         ruby: [2.4, 2.7, 3.0]
-        os: [ubuntu-latest]
+        os: [ubuntu-20.04]
     steps:
     - uses: actions/checkout@v2
     - name: Install TeXLive 2019 in ubuntu
       if: runner.os == 'Linux'
       run: |
-        sudo add-apt-repository ppa:jonathonf/texlive-2019
         sudo apt-get update -y -qq && sudo apt-get install -y -qq texlive-lang-japanese texlive-fonts-recommended texlive-fonts-extra texlive-luatex texlive-extra-utils texlive-latex-extra
     - name: Set up Ruby
       uses: ruby/setup-ruby@v1
