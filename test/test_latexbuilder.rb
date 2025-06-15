@@ -525,7 +525,6 @@ EOS
 
 \\begin{description}
 \\item[foo\\protect\\footnotemark{}\\lbrack{}\\rbrack{}\\textless{}\\textgreater{}\\&$\\alpha\\lbrack{}\\rbrack{}$] \\mbox{} \\\\
-
 \\end{description}
 EOS
     assert_equal expected, actual
@@ -2866,7 +2865,6 @@ EOS
 
 \\begin{description}
 \\item[DL1] \\mbox{} \\\\
-
 
 
 \\begin{enumerate}
