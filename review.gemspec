@@ -31,6 +31,7 @@ Gem::Specification.new do |gem|
   gem.add_dependency('rubyzip')
   gem.add_dependency('tty-logger')
   gem.add_development_dependency('chunky_png')
+  gem.add_development_dependency('nokogiri')
   gem.add_development_dependency('playwright-runner')
   gem.add_development_dependency('pygments.rb')
   gem.add_development_dependency('rake')
@@ -41,5 +42,4 @@ Gem::Specification.new do |gem|
   gem.add_development_dependency('test-unit')
   gem.add_development_dependency('unicode-eaw')
   gem.add_development_dependency('webrick')
-  gem.add_development_dependency('nokogiri')
 end
