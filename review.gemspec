@@ -33,6 +33,7 @@ Gem::Specification.new do |gem|
   gem.add_dependency('tty-logger')
   gem.add_development_dependency('chunky_png')
   gem.add_development_dependency('diff-lcs')
+  gem.add_development_dependency('math_ml')
   gem.add_development_dependency('nokogiri')
   gem.add_development_dependency('playwright-runner')
   gem.add_development_dependency('pygments.rb')
