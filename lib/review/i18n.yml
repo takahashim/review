@@ -16,6 +16,7 @@ ja:
   hd_quote: "「%s %s」"
   hd_quote_without_number: "「%s」"
   appendix: 付録%pA
+  appendix_short: "%pA"
   numberless_image: "図:"
   note_head: NOTE
   tip_head: TIP
@@ -113,6 +114,7 @@ en:
   hd_quote: '"%s %s"'
   hd_quote_without_number: '"%s"'
   appendix: Appendix %s
+  appendix_short: "%pA"
   numberless_image: "Figure:"
   note_head: NOTE
   tip_head: TIP
@@ -191,6 +193,7 @@ zh-TW:
   hd_quote: "「%s %s」"
   hd_quote_without_number: "「%s」"
   appendix: 附錄%s
+  appendix_short: "%pA"
   numberless_image: "圖:"
   note_head: NOTE
   tip_head: TIP
